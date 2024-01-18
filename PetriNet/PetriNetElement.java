@@ -22,4 +22,12 @@ public abstract class PetriNetElement {
     public String getName() {
         return name;
     }
+
+    /**
+     * Setter for the name of the element
+     * @param name Name of the element
+     */
+    public void setName(String name) {
+        this.name = name;
+    }
 }
