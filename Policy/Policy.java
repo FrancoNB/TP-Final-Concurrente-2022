@@ -1,11 +1,5 @@
 package Policy;
 
-import Monitor.Monitor;
-
-public class Policy {
-    Monitor monitor;
-    
-    public Policy(Monitor monitor) {
-        this.monitor = monitor;
-    }
+public interface Policy {
+    public int decide(int[] transitionsAbleToFire);
 }
