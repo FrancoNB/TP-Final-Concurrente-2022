@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
 import Data.Logger;
 
@@ -149,25 +148,6 @@ public class PetriNet extends PetriNetElement {
         this.states.add(markings.clone());
 
         updateEnabledTransitions();
-    }
-
-    /**
-     * Check if the Petri Net is in deadlock.
-     * @return True if the Petri Net is in deadlock.
-     *         False otherwise.
-     */
-    private boolean checkDeadlock() {
-        int[] enabled = getEnableTransitions();
-        int test = 0;
-
-        for(int i = 0; i < transitions.size(); i++)
-            if(enabled[i] == 0)
-                test++;
-
-        if(test == transitions.size())
-            return true;
-
-        return false;
     }
 
     /**
@@ -368,28 +348,6 @@ public class PetriNet extends PetriNetElement {
             logger.logTransitions(getName());
             
             updateNet(transition);
-        }
-    }
-
-    /**
-     * Fire randomly a transition of the Petri Net until the time passed as argument is reached or the Petri Net is in deadlock. Log the transitions fired.
-     * @param time Maximum time to fire transitions.
-     * @param log Logger to log the transitions fired.
-     */
-    public void fireContinuously(int time) {
-        long startTime = System.currentTimeMillis();
-        long endTime = startTime + time * 1000;
-
-        while(System.currentTimeMillis() <  endTime) {
-            int i = ThreadLocalRandom.current().nextInt(1, transitions.size());
-
-            fireTransition(i);
-
-            if (checkDeadlock())
-            {
-                System.out.println("---------- DEADLOCK ----------");
-                break;
-            }
         }
     }
 }

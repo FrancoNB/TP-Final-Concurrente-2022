@@ -1,6 +1,8 @@
 package Monitor;
 
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
@@ -9,6 +11,7 @@ import java.util.stream.IntStream;
 import PetriNet.PetriNet;
 import PetriNet.Transition;
 import Policy.Policy;
+import Segment.Segment;
 
 public class Monitor {
     private final PetriNet petriNet;
@@ -17,18 +20,48 @@ public class Monitor {
 
     private final Condition[] waitQueue;
 
-    private final Map<Integer, Integer> transitionsFireCount;
+    private final Map<Integer, Integer> transitionsFiredCount;
+
+    private final Map<int[], Integer> invariantsTransitionsFiredCount;
 
     private Policy policy;
 
-    public Monitor(PetriNet petriNet, Policy policy) {
+    private int[] getWaitTransitions() {
+        return IntStream.range(0, waitQueue.length - 1)
+                        .map(i -> mutex.hasWaiters(waitQueue[i]) ? 1 : 0)
+                        .toArray();
+    }
+
+    private int[] getTransitionsAbleToFire(int[] transitions) {
+        return IntStream.range(0, waitQueue.length - 1)
+                        .map(i -> (petriNet.getEnableTransitions()[i] == 1 && transitions[i] == 1) ? (i + 1) : 0)
+                        .toArray();
+    }
+
+    private void UpdateFiredCounts(int transitionFired) {
+    transitionsFiredCount.put(transitionFired, transitionsFiredCount.get(transitionFired) + 1);
+
+    invariantsTransitionsFiredCount.keySet().stream()
+        .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
+        .findFirst()
+        .ifPresent(invariant -> {
+            if (Arrays.stream(invariant).allMatch(t -> transitionsFiredCount.get(t) > invariantsTransitionsFiredCount.get(invariant))) {
+                invariantsTransitionsFiredCount.put(invariant, invariantsTransitionsFiredCount.get(invariant) + 1);
+            }
+        });
+    }
+
+    public Monitor(PetriNet petriNet, Policy policy, List<int[]> invariantsTransitions) {
         this.petriNet = petriNet;
         this.policy = policy;
 
         this.mutex = new ReentrantLock();
 
-        this.transitionsFireCount = IntStream.range(0, petriNet.getNumberOfTransitions() - 1)
+        this.transitionsFiredCount = IntStream.range(1, petriNet.getNumberOfTransitions())
                                              .collect(HashMap::new, (m, v) -> m.put(v, 0), HashMap::putAll);
+
+        this.invariantsTransitionsFiredCount = IntStream.range(0, invariantsTransitions.size())
+                                              .collect(HashMap::new, (m, v) -> m.put(invariantsTransitions.get(v), 0), HashMap::putAll);
 
         this.waitQueue = IntStream.range(0, petriNet.getNumberOfTransitions() - 1)
                                   .mapToObj(i -> mutex.newCondition())
@@ -57,22 +90,16 @@ public class Monitor {
             
             petriNet.fireTransition(transition);
 
-            transitionsFireCount.put(transition, transitionsFireCount.get(transition) + 1);
+            int [] waitTransitions = getWaitTransitions();
 
-            int [] waitTransitions = IntStream.range(0, waitQueue.length - 1)
-                                              .map(i -> mutex.hasWaiters(waitQueue[i]) ? 1 : 0)
-                                              .toArray();
+            int [] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
 
-            int [] transitionsAbleToFire = IntStream.range(0, waitQueue.length - 1)
-                                                    .map(i -> (petriNet.getEnableTransitions()[i] == 1 && waitTransitions[i] == 1) ? (i + 1) : 0)
-                                                    .toArray();
+            UpdateFiredCounts(transition);
 
-            int nextTransition = policy.decide(transitionsAbleToFire);
+            int nextTransition = policy.decide(transitionsAbleToFire, invariantsTransitionsFiredCount);
 
             if (nextTransition > 0)
                 waitQueue[nextTransition - 1].signalAll();
-            
-            mutex.unlock();
         } catch (InterruptedException | IllegalMonitorStateException e) {
             e.printStackTrace();
         } finally {

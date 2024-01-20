@@ -1,35 +1,28 @@
 package Segment;
 
-import java.util.concurrent.atomic.AtomicInteger;
-
 import Monitor.Monitor;
 
 public class Segment implements Runnable {
-    private final int[] invariantsTransitions;
+    private final int[] transitions;
     private final Monitor monitor;
     private boolean isInterrupted;
-    private AtomicInteger executedCiclesCount;
-    
-    protected Segment(Monitor monitor, int[] invariantsTransitions) {
+
+    public Segment(Monitor monitor, int[] transitions) {
         this.monitor = monitor;
-        this.invariantsTransitions = invariantsTransitions;
+        this.transitions = transitions;
         isInterrupted = false;
-        executedCiclesCount = new AtomicInteger(0);
     }
 
-    protected boolean isInterrupted() {
+    public boolean isInterrupted() {
         return isInterrupted;
     }
 
     @Override
     public void run() {
         try {
-            while (!isInterrupted()) {
-                for (Integer t : invariantsTransitions)
+            while (!isInterrupted())
+                for (Integer t : transitions)
                     monitor.fireTransition(t);
-
-                executedCiclesCount.incrementAndGet();
-            }
         }
         catch (RuntimeException e) {
             isInterrupted = true;
