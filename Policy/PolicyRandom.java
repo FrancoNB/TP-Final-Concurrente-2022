@@ -1,6 +1,5 @@
 package Policy;
 
-import java.util.Map;
 import java.util.Random;
 
 public class PolicyRandom implements Policy {
@@ -10,10 +9,10 @@ public class PolicyRandom implements Policy {
         this.random = new Random();
     }
 
-    public int decide(Map<Integer, Integer> transitionsAbleToFire) {
-        if (transitionsAbleToFire.isEmpty())
+    public int decide(int[] transitionsAbleToFire, Object ... args) {
+        if (transitionsAbleToFire.length == 0)
             return -1;
-            
-        return transitionsAbleToFire.keySet().toArray(new Integer[0])[random.nextInt(transitionsAbleToFire.size())];
+        
+        return transitionsAbleToFire[random.nextInt(transitionsAbleToFire.length)];
     }
 }
