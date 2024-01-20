@@ -19,6 +19,9 @@ public class PetriNet extends PetriNetElement {
     // List of arcs in the Petri Net.
     private final List<Arc> arcs;
 
+    // Logger to log Petri Net events.
+    private final Logger logger;
+
     // Incidence matrix of the Petri Net.
     private int[][] incidenceMatrix;
     // Markings of the Petri Net.
@@ -114,7 +117,7 @@ public class PetriNet extends PetriNetElement {
     /**
      * Update the enabled transitions of the Petri Net according to the markings.
      */
-    private void updateTransitionsAbleToFire() {
+    private void updateEnabledTransitions() {
         enabledTransitions = new int[transitions.size()];
 
         for (int i = 0; i < transitions.size(); i++) {
@@ -129,6 +132,7 @@ public class PetriNet extends PetriNetElement {
                 }
 
                 enabledTransitions[i] = 1;
+
                 transitions.get(i).setTimeStamp();
             }
         }
@@ -144,7 +148,7 @@ public class PetriNet extends PetriNetElement {
 
         this.states.add(markings.clone());
 
-        updateTransitionsAbleToFire();
+        updateEnabledTransitions();
     }
 
     /**
@@ -174,13 +178,15 @@ public class PetriNet extends PetriNetElement {
      * @param cantPlaces Number of places.
      * @param cantTransitions Number of transitions.
      */
-    public PetriNet(String name, int[] initialMarks, int[][] incidenceMatrix, int cantPlaces, int cantTransitions) {
+    public PetriNet(String name, int[] initialMarks, int[][] incidenceMatrix, int cantPlaces, int cantTransitions, Logger logger) {
         super(name);
 
         places = new ArrayList<>();
         transitions = new ArrayList<>();
         arcs = new ArrayList<>();
         states = new HashSet<>();
+
+        this.logger = logger;
 
         generatePlaces(initialMarks, cantPlaces);
 
@@ -193,7 +199,42 @@ public class PetriNet extends PetriNetElement {
 
         generateIncidences(incidenceMatrix, cantPlaces, cantTransitions);
 
-        updateTransitionsAbleToFire();
+        updateEnabledTransitions();
+    }
+
+    /**
+     * Check the timed state of the transition passed as argument.
+     * @param transition Transition to check.
+     * @return Timed state of the transition:
+     *          * NO_TIMED if the transition is not timed.
+     *          * IN_WINDOW if the transition is timed and the current time is in the time frame.
+     *          * BEFORE_WINDOW if the transition is timed and the current time is before the time frame.
+     *          * AFTER_WINDOW if the transition is timed and the current time is after the time frame.
+     */
+    public Transition.TimedState checkTimedStateTransition(int transition) {
+        Transition t = getTransition(transition);
+
+        if (t.isTimed()) {
+            long currentTime = System.currentTimeMillis();
+            long time = currentTime - t.getTimeStamp();
+
+            if (time < t.getAlfaTime())
+            {
+                logger.logTimed(t.getName() + " COOL-DOWN - " + time + "[ms] < " + t.getAlfaTime() + "[ms]\n");
+
+                return Transition.TimedState.BEFORE_WINDOW;
+            }
+            else if (time <= t.getBetaTime())
+                return Transition.TimedState.IN_WINDOW;
+            else
+            {
+                logger.logTimed(t.getName() + " TIME-OUT - " + t.getBetaTime() + "[ms] > " + time + "[ms]\n");
+
+                return Transition.TimedState.AFTER_WINDOW;
+            }
+        }
+
+        return Transition.TimedState.NO_TIMED;
     }
 
     /**
@@ -217,41 +258,6 @@ public class PetriNet extends PetriNetElement {
     }
 
     /**
-     * Get the timed transitions of the Petri Net.
-     * @return Array with all transitions of the Petri Net.
-     *         1 if the transition is timed, 0 otherwise.
-     */
-    public int[] getTimeSensibleTransitions() {
-        int[] arr = new int[transitions.size()];
-
-        for (int i = 0; i < transitions.size(); i++) {
-            if (transitions.get(i).isTimed()) 
-                arr[i] = 1;
-            else
-                arr[i] = 0;
-        }
-
-        return arr;
-    }
-
-    /**
-     * Get the time frame of the transition in the Petri Net.
-     * @return Bidimensional array with the time frame of each transition.
-     *         The first column is the alfa time and the second column is the beta time.
-     *         If the transition is not timed, the time frame is set to 0.
-     */
-    public long[][] getTransitionsTimeRange() {
-        long[][] arr = new long[transitions.size()][2];
-
-        for (int i = 0; i < transitions.size(); i++) {
-            arr[i][0] = transitions.get(i).getAlfaTime();
-            arr[i][1] = transitions.get(i).getBetaTime();
-        }
-
-        return arr;
-    }
-
-    /**
      * Get the enabled transitions of the Petri Net.
      * @return Array with all enabled transitions of the Petri Net.
      */
@@ -259,20 +265,12 @@ public class PetriNet extends PetriNetElement {
         return enabledTransitions;
     }
 
-    /**
-     * Getter for the places of the Petri Net.
-     * @return List of places of the Petri Net.
-     */
-    public List<Place> getPlaces() {
-        return places;
+    public Transition getTransition(int index) {
+        return transitions.get(index);
     }
 
-    /**
-     * Getter for the transitions of the Petri Net.
-     * @return List of transitions of the Petri Net.
-     */
-    public List<Transition> getTransitions() {
-        return transitions;
+    public int getNumberOfTransitions() {
+        return transitions.size();
     }
 
     /**
@@ -360,14 +358,14 @@ public class PetriNet extends PetriNetElement {
      * @param transition Transition to fire. 
      * @param log Logger to log the transition fired.
      */
-    public void fireTransition(int transition, Logger log) {
+    public void fireTransition(int transition) {
         Transition t = transitions.get(transition - 1);
 
         if (t.canFire())
         {
             t.fire();
 
-            log.logTransitions(getName());
+            logger.logTransitions(getName());
             
             updateNet(transition);
         }
@@ -378,14 +376,14 @@ public class PetriNet extends PetriNetElement {
      * @param time Maximum time to fire transitions.
      * @param log Logger to log the transitions fired.
      */
-    public void fireContinuously(int time, Logger log) {
+    public void fireContinuously(int time) {
         long startTime = System.currentTimeMillis();
         long endTime = startTime + time * 1000;
 
         while(System.currentTimeMillis() <  endTime) {
             int i = ThreadLocalRandom.current().nextInt(1, transitions.size());
 
-            fireTransition(i, log);
+            fireTransition(i);
 
             if (checkDeadlock())
             {
