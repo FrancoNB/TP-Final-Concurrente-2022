@@ -39,16 +39,16 @@ public class Monitor {
     }
 
     private void UpdateFiredCounts(int transitionFired) {
-    transitionsFiredCount.put(transitionFired, transitionsFiredCount.get(transitionFired) + 1);
+        transitionsFiredCount.put(transitionFired, transitionsFiredCount.get(transitionFired) + 1);
 
-    invariantsTransitionsFiredCount.keySet().stream()
-        .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
-        .findFirst()
-        .ifPresent(invariant -> {
-            if (Arrays.stream(invariant).allMatch(t -> transitionsFiredCount.get(t) > invariantsTransitionsFiredCount.get(invariant))) {
-                invariantsTransitionsFiredCount.put(invariant, invariantsTransitionsFiredCount.get(invariant) + 1);
-            }
-        });
+        invariantsTransitionsFiredCount.keySet().stream()
+            .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
+            .findFirst()
+            .ifPresent(invariant -> {
+                if (Arrays.stream(invariant).allMatch(t -> transitionsFiredCount.get(t) > invariantsTransitionsFiredCount.get(invariant))) {
+                    invariantsTransitionsFiredCount.put(invariant, invariantsTransitionsFiredCount.get(invariant) + 1);
+                }
+            });
     }
 
     public Monitor(PetriNet petriNet, Policy policy, List<int[]> invariantsTransitions) {
@@ -90,13 +90,13 @@ public class Monitor {
             
             petriNet.fireTransition(transition);
 
-            int [] waitTransitions = getWaitTransitions();
+            int[] waitTransitions = getWaitTransitions();
 
-            int [] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
+            int[] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
 
             UpdateFiredCounts(transition);
 
-            int nextTransition = policy.decide(transitionsAbleToFire, invariantsTransitionsFiredCount);
+            int nextTransition = policy.decide(transitionsAbleToFire, transitionsFiredCount, invariantsTransitionsFiredCount);
 
             if (nextTransition > 0)
                 waitQueue[nextTransition - 1].signalAll();
