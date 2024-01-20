@@ -1,4 +1,4 @@
-package Monitor;
+package main.java.com.picasso.Monitor;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -8,9 +8,9 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
 
-import PetriNet.PetriNet;
-import PetriNet.Transition;
-import Policy.Policy;
+import main.java.com.picasso.PetriNet.PetriNet;
+import main.java.com.picasso.PetriNet.Transition;
+import main.java.com.picasso.Policy.Policy;
 
 public class Monitor {
     private final PetriNet petriNet;
@@ -25,15 +25,18 @@ public class Monitor {
 
     private Policy policy;
 
+    private boolean isInterrupted;
+
     private int[] getWaitTransitions() {
-        return IntStream.range(0, waitQueue.length - 1)
+        return IntStream.range(0, waitQueue.length)
                         .map(i -> mutex.hasWaiters(waitQueue[i]) ? 1 : 0)
                         .toArray();
     }
 
     private int[] getTransitionsAbleToFire(int[] transitions) {
-        return IntStream.range(0, waitQueue.length - 1)
+        return IntStream.range(0, waitQueue.length)
                         .map(i -> (petriNet.getEnableTransitions()[i] == 1 && transitions[i] == 1) ? (i + 1) : 0)
+                        .filter(element -> element != 0)
                         .toArray();
     }
 
@@ -54,38 +57,57 @@ public class Monitor {
         this.petriNet = petriNet;
         this.policy = policy;
 
+        isInterrupted = false;
+
         this.mutex = new ReentrantLock();
 
-        this.transitionsFiredCount = IntStream.range(1, petriNet.getNumberOfTransitions())
+        this.transitionsFiredCount = IntStream.range(1, petriNet.getNumberOfTransitions() + 1)
                                              .collect(HashMap::new, (m, v) -> m.put(v, 0), HashMap::putAll);
 
         this.invariantsTransitionsFiredCount = IntStream.range(0, invariantsTransitions.size())
                                               .collect(HashMap::new, (m, v) -> m.put(invariantsTransitions.get(v), 0), HashMap::putAll);
 
-        this.waitQueue = IntStream.range(0, petriNet.getNumberOfTransitions() - 1)
+        this.waitQueue = IntStream.range(0, petriNet.getNumberOfTransitions())
                                   .mapToObj(i -> mutex.newCondition())
                                   .toArray(Condition[]::new);
+    }
+
+    public Map<Integer, Integer> getTransitionsFiredCount() {
+        return transitionsFiredCount;
+    }
+
+    public Map<int[], Integer> getInvariantsTransitionsFiredCount() {
+        return invariantsTransitionsFiredCount;
     }
 
     public void changePolicy(Policy policy) {
         this.policy = policy;
     }
 
-    public void fireTransition(int transition) {
+    public void fireTransition(int transition) throws InterruptedException {
         try {
             mutex.lock();
 
             Transition.TimedState timedState;
 
-            do {
-               timedState = petriNet.checkTimedStateTransition(transition);
-
-                waitQueue[transition].await();
-            } while (timedState != Transition.TimedState.NO_TIMED && timedState != Transition.TimedState.IN_WINDOW);
+            while (true) {
+                timedState = petriNet.checkTimedStateTransition(transition);
                 
+                if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
+                    break;
 
-            while (!petriNet.isEnabled(transition))
-                waitQueue[transition].await();
+                waitQueue[transition - 1].await();
+
+                if (isInterrupted)
+                    throw new InterruptedException();
+            }
+
+            while (!petriNet.isEnabled(transition)) {
+                waitQueue[transition - 1].await();
+
+                if (isInterrupted)
+                    throw new InterruptedException();
+            }
             
             petriNet.fireTransition(transition);
 
@@ -99,8 +121,15 @@ public class Monitor {
 
             if (nextTransition > 0)
                 waitQueue[nextTransition - 1].signalAll();
-        } catch (InterruptedException | IllegalMonitorStateException e) {
+        } catch (IllegalMonitorStateException e) {
             e.printStackTrace();
+        } catch (InterruptedException e) {
+            for (Condition condition : waitQueue)
+                condition.signalAll();
+
+            isInterrupted = true;
+
+            throw e;
         } finally {
             mutex.unlock();
         }

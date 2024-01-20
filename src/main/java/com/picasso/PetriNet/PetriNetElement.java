@@ -1,4 +1,4 @@
-package PetriNet;
+package main.java.com.picasso.PetriNet;
 
 /**
  * PetriNetElement class is the base class for all the elements of a Petri Net

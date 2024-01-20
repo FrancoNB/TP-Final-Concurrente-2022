@@ -1,11 +1,15 @@
-import java.util.ArrayList;
-import java.util.List;
+package main.java.com.picasso;
 
-import Data.Logger;
-import Monitor.Monitor;
-import PetriNet.PetriNet;
-import Policy.*;
-import Segment.Segment;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+
+import main.java.com.picasso.Monitor.Monitor;
+import main.java.com.picasso.PetriNet.PetriNet;
+import main.java.com.picasso.Policy.*;
+import main.java.com.picasso.Segment.Segment;
+import main.java.com.picasso.Data.Logger;
 
 public class Main {
     private static final int NUMBER_OF_PLACES = 18;
@@ -32,7 +36,7 @@ public class Main {
         {  0,  0,  0,  0,  0, -1, -1,  1,  0,  0,  0,  0}, //P15
         {  0, -1, -1,  1,  1,  0,  0,  0, -1,  1,  0,  0}, //CS1
         { -1,  0,  0,  1,  1,  0,  0,  0, -1,  0,  1,  0}, //CS2
-        {  0,  0,  0,  0,  0,  0,  0,  0,  0, -1,  1,  0}, //CS3
+        { -1,  1,  1,  0,  0,  0,  0,  0,  0, -1,  1,  0}, //CS3
     };
 
     private static final List<int[]> INVARIANTS_TRANSITIONS = List.of(
@@ -51,9 +55,25 @@ public class Main {
 
     private static final List<Integer> SEGMENT_THREADS = List.of(2, 4, 4, 1, 4);
 
+    private static final int TIME_EXECUTION = 1000;
+
+    private static void logStatistics(Monitor monitor) {
+        Logger.logStatistics("* ------------------------------ STATISTICS ------------------------------ *\n");
+
+        Logger.logStatistics(String.format("- TIME EXECUTION -> %dms", TIME_EXECUTION));
+
+        Logger.logStatistics("\n- TRANSITIONS FIRED");
+        monitor.getTransitionsFiredCount().forEach((k, v) -> Logger.logStatistics(String.format("\tT%-2d -> %d", k, v)));
+        Logger.logStatistics("\n- INVARIANTS FIRED");
+        monitor.getInvariantsTransitionsFiredCount().forEach((k, v) -> Logger.logStatistics(String.format("\tINV %s -> %d", Arrays.toString(k), v)));
+
+        Logger.logStatistics("\n* ------------------------------ STATISTICS ------------------------------ *");
+    }
+
     public static void main(String[] args) {
-        Logger logger = new Logger();
-        PetriNet petriNet = new PetriNet("PetriNet", INITIAL_MARKING, INCIDENCE_MATRIX, NUMBER_OF_PLACES, NUMBER_OF_TRANSITIONS, logger);
+        Logger.logSystem("* ------------------------------- PICASSO ------------------------------- *\n");
+
+        PetriNet petriNet = new PetriNet("PetriNet", INITIAL_MARKING, INCIDENCE_MATRIX, NUMBER_OF_PLACES, NUMBER_OF_TRANSITIONS);
         Policy policy = new PolicyRandom();
         Monitor monitor = new Monitor(petriNet, policy, INVARIANTS_TRANSITIONS);
         List<Thread> threads = new ArrayList<Thread>();
@@ -74,5 +94,32 @@ public class Main {
         petriNet.setPlaceName("P17", "CS2");
         petriNet.setPlaceName("P18", "CS3");
 
+        for (Thread thread : threads) {
+            thread.start();
+            Logger.logSystem(String.format("STARTED -> %-35s", thread.getName()));
+        }
+
+        Logger.logSystem("");
+
+        try {
+            TimeUnit.MILLISECONDS.sleep(TIME_EXECUTION);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        for (Thread thread : threads)
+            thread.interrupt();
+
+        for (Thread thread : threads)
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+        logStatistics(monitor);
+
+        Logger.logSystem("\n* ------------------------------- PICASSO ------------------------------- *");
+        Logger.shutdown();
     }
 }

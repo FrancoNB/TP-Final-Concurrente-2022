@@ -1,4 +1,4 @@
-package PetriNet;
+package main.java.com.picasso.PetriNet;
 
 import java.util.ArrayList;
 import java.util.Date;

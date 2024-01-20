@@ -1,11 +1,11 @@
-package PetriNet;
+package main.java.com.picasso.PetriNet;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import Data.Logger;
+import main.java.com.picasso.Data.Logger;
 
 /**
  * PetriNet class Represents a Petri Net.
@@ -17,9 +17,6 @@ public class PetriNet extends PetriNetElement {
     private final List<Transition> transitions;
     // List of arcs in the Petri Net.
     private final List<Arc> arcs;
-
-    // Logger to log Petri Net events.
-    private final Logger logger;
 
     // Incidence matrix of the Petri Net.
     private int[][] incidenceMatrix;
@@ -80,7 +77,7 @@ public class PetriNet extends PetriNetElement {
      */
     private void generatePlaces(int[] initialMarks, int cantPlaces) {
         for (int i = 0; i < cantPlaces; i++)
-            this.addPlace("Place" + (i + 1), initialMarks[i]);
+            this.addPlace("P" + (i + 1), initialMarks[i]);
 
         this.markings = initialMarks;
     }
@@ -91,7 +88,7 @@ public class PetriNet extends PetriNetElement {
      */
     private void generateTransitions(int cantTransitions) {
         for (int i = 0; i < cantTransitions; i++)
-            this.addTransition("Transition" + (i + 1));
+            this.addTransition("T" + (i + 1));
     }
 
     /**
@@ -158,15 +155,13 @@ public class PetriNet extends PetriNetElement {
      * @param cantPlaces Number of places.
      * @param cantTransitions Number of transitions.
      */
-    public PetriNet(String name, int[] initialMarks, int[][] incidenceMatrix, int cantPlaces, int cantTransitions, Logger logger) {
+    public PetriNet(String name, int[] initialMarks, int[][] incidenceMatrix, int cantPlaces, int cantTransitions) {
         super(name);
 
         places = new ArrayList<>();
         transitions = new ArrayList<>();
         arcs = new ArrayList<>();
         states = new HashSet<>();
-
-        this.logger = logger;
 
         generatePlaces(initialMarks, cantPlaces);
 
@@ -200,7 +195,7 @@ public class PetriNet extends PetriNetElement {
 
             if (time < t.getAlfaTime())
             {
-                logger.logTimed(t.getName() + " COOL-DOWN - " + time + "[ms] < " + t.getAlfaTime() + "[ms]\n");
+                Logger.logTransition("COOL-DOWN -> " + t.getName() + " (" + time + "[ms] < " + t.getAlfaTime() + "[ms])");
 
                 return Transition.TimedState.BEFORE_WINDOW;
             }
@@ -208,7 +203,7 @@ public class PetriNet extends PetriNetElement {
                 return Transition.TimedState.IN_WINDOW;
             else
             {
-                logger.logTimed(t.getName() + " TIME-OUT - " + t.getBetaTime() + "[ms] > " + time + "[ms]\n");
+                Logger.logTransition("TIME-OUT - " + t.getName() + " (" + t.getBetaTime() + "[ms] > " + time + "[ms])");
 
                 return Transition.TimedState.AFTER_WINDOW;
             }
@@ -246,7 +241,7 @@ public class PetriNet extends PetriNetElement {
     }
 
     public Transition getTransition(int index) {
-        return transitions.get(index);
+        return transitions.get(index - 1);
     }
 
     public int getNumberOfTransitions() {
@@ -344,8 +339,6 @@ public class PetriNet extends PetriNetElement {
         if (t.canFire())
         {
             t.fire();
-
-            logger.logTransitions(getName());
             
             updateNet(transition);
         }
