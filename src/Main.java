@@ -2,10 +2,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 import Data.Logger;
-import PetriNet.PetriNet;
-import Segment.Segment;
 import Monitor.Monitor;
+import PetriNet.PetriNet;
 import Policy.*;
+import Segment.Segment;
 
 public class Main {
     private static final int NUMBER_OF_PLACES = 18;

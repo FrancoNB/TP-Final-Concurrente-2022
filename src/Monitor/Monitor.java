@@ -11,7 +11,6 @@ import java.util.stream.IntStream;
 import PetriNet.PetriNet;
 import PetriNet.Transition;
 import Policy.Policy;
-import Segment.Segment;
 
 public class Monitor {
     private final PetriNet petriNet;
