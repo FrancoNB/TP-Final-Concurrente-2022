@@ -203,7 +203,7 @@ public class PetriNet extends PetriNetElement {
                 return Transition.TimedState.IN_WINDOW;
             else
             {
-                Logger.logTransition("TIME-OUT - " + t.getName() + " (" + t.getBetaTime() + "[ms] > " + time + "[ms])");
+                Logger.logTransition("TIME-OUT - " + t.getName() + " (" + time + "[ms] > " + t.getBetaTime() + "[ms])");
 
                 return Transition.TimedState.AFTER_WINDOW;
             }

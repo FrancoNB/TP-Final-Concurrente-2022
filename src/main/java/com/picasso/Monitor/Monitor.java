@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
@@ -135,6 +136,17 @@ public class Monitor {
                 
                 if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
                     break;
+
+                if (timedState == Transition.TimedState.BEFORE_WINDOW) {
+                    long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
+
+                    waitQueue[transition - 1].await(sleepTime, TimeUnit.MILLISECONDS);
+
+                    if (isInterrupted)
+                        throw new InterruptedException();
+
+                    continue;
+                }
 
                 waitQueue[transition - 1].await();
 

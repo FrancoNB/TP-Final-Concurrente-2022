@@ -1,6 +1,10 @@
 package com.picasso.Segment;
 
+import java.util.Map;
+
+import com.picasso.Artist.GenericArtist;
 import com.picasso.Data.Logger;
+import com.picasso.Artist.Artist;
 import com.picasso.Monitor.Monitor;
 
 /**
@@ -8,7 +12,7 @@ import com.picasso.Monitor.Monitor;
  */
 public class Segment implements Runnable {
     // Array of transitions that are fired together
-    private final int[] transitions;
+    private final Map<Integer, Artist> transitions;
     // Monitor for synchronization
     private final Monitor monitor;
     // Name of the segment
@@ -20,7 +24,7 @@ public class Segment implements Runnable {
      * @param monitor Monitor for synchronization.
      * @param transitions Array of transitions that are fired together.
      */
-    public Segment(String name, Monitor monitor, int[] transitions) {
+    public Segment(String name, Monitor monitor, Map<Integer, Artist> transitions) {
         this.monitor = monitor;
         this.transitions = transitions;
         this.name = name;
@@ -41,9 +45,15 @@ public class Segment implements Runnable {
     public void run() {
         try {
             while (!Thread.interrupted()) {
-                for (Integer t : transitions) {
+                for (Integer t : transitions.keySet()) {
+                    Artist artist = transitions.get(t);
+
                     monitor.fireTransition(t);
+                    
                     Logger.logTransition(String.format("FIRED -> T%-2d ON %-35s", t, Thread.currentThread().getName()));
+
+                    if (artist != null)
+                        ((GenericArtist)artist).work();
                 }
             }         
         }

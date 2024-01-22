@@ -21,6 +21,8 @@ public class Logger {
     private static final BlockingQueue<LogEntry> systemQueue = new LinkedBlockingQueue<>();
     // Queue for statistics log messages
     private static final BlockingQueue<LogEntry> statisticsQueue = new LinkedBlockingQueue<>();
+    // Queue for artist log messages
+    private static final BlockingQueue<LogEntry> artistQueue = new LinkedBlockingQueue<>();
 
     // Directory where log files are stored
     private static final String LOG_DIR = "data/log";
@@ -31,6 +33,8 @@ public class Logger {
     private static final String LOG_SYSTEM = "system.log";
     // Log file for statistics
     private static final String LOG_STATISTICS = "statistics.log";
+    // Log file for artists
+    private static final String LOG_ARTIST = "artist.log";
 
     /**
      * Static block to initialize log files and start threads for processing queues.
@@ -40,6 +44,7 @@ public class Logger {
         initializeLogFile(LOG_TRANSITIONS);
         initializeLogFile(LOG_SYSTEM);
         initializeLogFile(LOG_STATISTICS);
+        initializeLogFile(LOG_ARTIST);
 
         Thread transitionsThread = new Thread(() -> processQueue(transitionsQueue, LOG_TRANSITIONS), "[Logger Transitions - Thread 0]");
         transitionsThread.setDaemon(true);
@@ -52,6 +57,10 @@ public class Logger {
         Thread statisticsThread = new Thread(() -> processQueue(statisticsQueue, LOG_STATISTICS), "[Logger Statistics - Thread 2]");
         statisticsThread.setDaemon(true);
         statisticsThread.start();
+
+        Thread artistThread = new Thread(() -> processQueue(artistQueue, LOG_ARTIST), "[Logger Artist - Thread 3]");
+        artistThread.setDaemon(true);
+        artistThread.start();
     }
 
     /**
@@ -76,6 +85,14 @@ public class Logger {
      */
     public static void logStatistics(String message) {
         statisticsQueue.offer(new LogEntry(message, LOG_STATISTICS));
+    }
+
+    /**
+     * Logs an artist message to the artist log file.
+     * @param message Message to be logged.
+     */
+    public static void logArtist(String message) {
+        artistQueue.offer(new LogEntry(message, LOG_ARTIST));
     }
 
     /**
@@ -129,7 +146,8 @@ public class Logger {
                 writeToFile(logEntry, fileName);
             }
         } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();  
+            Thread.currentThread().interrupt(); 
+            shutdown(); 
         }
         finally {
             Logger.logSystem(String.format("FINISHED -> %-35s", Thread.currentThread().getName()));
