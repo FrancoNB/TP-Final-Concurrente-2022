@@ -1,6 +1,9 @@
 package com.picasso.Policy;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 public class PolicyMinTransitions implements Policy {
     @SuppressWarnings("unchecked")
@@ -24,50 +27,29 @@ public class PolicyMinTransitions implements Policy {
     }
 
     private int[] getInvariantWithLessTransitionsExecuted(Map<int[], Integer> invariantsTransitionsFiredCount) {
-        int minTransitionsExecuted = Integer.MAX_VALUE;
-        int[] minInvariant = null;
-
-        for (Map.Entry<int[], Integer> entry : invariantsTransitionsFiredCount.entrySet()) {
-            if (entry.getValue() < minTransitionsExecuted) {
-                minTransitionsExecuted = entry.getValue();
-                minInvariant = entry.getKey();
-            }
-        }
-
-        return minInvariant;
+        return invariantsTransitionsFiredCount.entrySet().stream()
+                .min(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 
     private int[] getTransitionsAbleToFireInInvariant(int[] invariant, int[] transitionsAbleToFire) {
-        int[] transitionsAbleToFireInInvariant = new int[transitionsAbleToFire.length];
-        int i = 0;
+        List<Integer> transitionsAbleToFireList = Arrays.stream(transitionsAbleToFire).boxed().collect(Collectors.toList());
 
-        for (int transition : transitionsAbleToFire) {
-            for (int place : invariant) {
-                if (transition == place) {
-                    transitionsAbleToFireInInvariant[i] = transition;
-                    i++;
-                    break;
-                }
-            }
-        }
+        List<Integer> transitionsAbleToFireInInvariantList = transitionsAbleToFireList.stream()
+                .filter(transition -> Arrays.stream(invariant).anyMatch(place -> place == transition))
+                .collect(Collectors.toList());
 
-        if (i == 0)
+        if (transitionsAbleToFireInInvariantList.isEmpty())
             return new int[]{-1};
 
-        return transitionsAbleToFireInInvariant;
+        return transitionsAbleToFireInInvariantList.stream().mapToInt(Integer::intValue).toArray();
     }
 
     private int getTransitionWithLessTransitionsExecuted(int[] transitionsAbleToFire, Map<Integer, Integer> transitionsFiredCount) {
-        int minTransitionsExecuted = Integer.MAX_VALUE;
-        int minTransition = -1;
-
-        for (int transition : transitionsAbleToFire) {
-            if (transitionsFiredCount.get(transition) < minTransitionsExecuted) {
-                minTransitionsExecuted = transitionsFiredCount.get(transition);
-                minTransition = transition;
-            }
-        }
-
-        return minTransition;
+        return Arrays.stream(transitionsAbleToFire)
+                .boxed()
+                .min((t1, t2) -> Integer.compare(transitionsFiredCount.getOrDefault(t1, 0), transitionsFiredCount.getOrDefault(t2, 0)))
+                .orElse(-1);
     }
 }
