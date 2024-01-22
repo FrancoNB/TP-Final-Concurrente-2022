@@ -1,4 +1,4 @@
-package main.java.com.picasso.Policy;
+package com.picasso.Policy;
 
 import java.util.Map;
 
@@ -8,21 +8,9 @@ public class PolicyMinTransitions implements Policy {
         if (transitionsAbleToFire.length == 0)
             return -1;
         
-        Map<Integer, Integer> transitionsFiredCount = null;
-        Map<int[], Integer> invariantsTransitionsFiredCount = null;
+        Map<Integer, Integer> transitionsFiredCount = (Map<Integer, Integer>) args[0];
+        Map<int[], Integer> invariantsTransitionsFiredCount = (Map<int[], Integer>) args[1];
 
-        for (Object arg : args) {
-            if (arg instanceof Map) {
-                if (arg instanceof Map<?, ?>)
-                    transitionsFiredCount = (Map<Integer, Integer>) arg;
-                else if (arg instanceof Map<?, ?>)
-                    invariantsTransitionsFiredCount = (Map<int[], Integer>) arg;
-                else
-                    throw new IllegalArgumentException("Argument must be a Map");
-            } else
-                throw new IllegalArgumentException("Unsupported argument type");
-        }
-        
         int[] minInvariant = getInvariantWithLessTransitionsExecuted(invariantsTransitionsFiredCount);
         
         int[] transitionsAbleToFireInInvariant = getTransitionsAbleToFireInInvariant(minInvariant, transitionsAbleToFire);
@@ -74,8 +62,8 @@ public class PolicyMinTransitions implements Policy {
         int minTransition = -1;
 
         for (int transition : transitionsAbleToFire) {
-            if (transitionsFiredCount.get(transition) < minTransitionsExecuted) {
-                minTransitionsExecuted = transitionsFiredCount.get(transition);
+            if (transitionsFiredCount.get(transition - 1) < minTransitionsExecuted) {
+                minTransitionsExecuted = transitionsFiredCount.get(transition - 1);
                 minTransition = transition;
             }
         }

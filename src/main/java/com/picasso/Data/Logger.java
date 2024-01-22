@@ -1,4 +1,4 @@
-package main.java.com.picasso.Data;
+package com.picasso.Data;
 
 import java.io.BufferedWriter;
 import java.io.FileWriter;

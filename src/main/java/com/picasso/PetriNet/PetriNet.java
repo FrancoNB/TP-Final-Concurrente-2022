@@ -1,11 +1,11 @@
-package main.java.com.picasso.PetriNet;
+package com.picasso.PetriNet;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import main.java.com.picasso.Data.Logger;
+import com.picasso.Data.Logger;
 
 /**
  * PetriNet class Represents a Petri Net.

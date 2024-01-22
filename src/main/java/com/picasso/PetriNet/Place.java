@@ -1,4 +1,4 @@
-package main.java.com.picasso.PetriNet;
+package com.picasso.PetriNet;
 
 /**
  * Place class

@@ -1,4 +1,4 @@
-package main.java.com.picasso.Policy;
+package com.picasso.Policy;
 
 import java.util.Random;
 

@@ -1,4 +1,4 @@
-package main.java.com.picasso.Monitor;
+package com.picasso.Monitor;
 
 import java.util.Arrays;
 import java.util.HashMap;
@@ -8,9 +8,9 @@ import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.IntStream;
 
-import main.java.com.picasso.PetriNet.PetriNet;
-import main.java.com.picasso.PetriNet.Transition;
-import main.java.com.picasso.Policy.Policy;
+import com.picasso.PetriNet.PetriNet;
+import com.picasso.PetriNet.Transition;
+import com.picasso.Policy.Policy;
 
 public class Monitor {
     private final PetriNet petriNet;

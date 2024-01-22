@@ -1,15 +1,15 @@
-package main.java.com.picasso;
+package com.picasso;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import main.java.com.picasso.Monitor.Monitor;
-import main.java.com.picasso.PetriNet.PetriNet;
-import main.java.com.picasso.Policy.*;
-import main.java.com.picasso.Segment.Segment;
-import main.java.com.picasso.Data.Logger;
+import com.picasso.Monitor.Monitor;
+import com.picasso.PetriNet.PetriNet;
+import com.picasso.Policy.*;
+import com.picasso.Segment.Segment;
+import com.picasso.Data.Logger;
 
 public class Main {
     private static final int NUMBER_OF_PLACES = 18;
@@ -74,7 +74,7 @@ public class Main {
         Logger.logSystem("* ------------------------------- PICASSO ------------------------------- *\n");
 
         PetriNet petriNet = new PetriNet("PetriNet", INITIAL_MARKING, INCIDENCE_MATRIX, NUMBER_OF_PLACES, NUMBER_OF_TRANSITIONS);
-        Policy policy = new PolicyRandom();
+        Policy policy = new PolicyMinTransitions();
         Monitor monitor = new Monitor(petriNet, policy, INVARIANTS_TRANSITIONS);
         List<Thread> threads = new ArrayList<Thread>();
 

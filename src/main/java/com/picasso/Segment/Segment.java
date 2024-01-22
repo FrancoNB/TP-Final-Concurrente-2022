@@ -1,7 +1,7 @@
-package main.java.com.picasso.Segment;
+package com.picasso.Segment;
 
-import main.java.com.picasso.Data.Logger;
-import main.java.com.picasso.Monitor.Monitor;
+import com.picasso.Data.Logger;
+import com.picasso.Monitor.Monitor;
 
 public class Segment implements Runnable {
     private final int[] transitions;
