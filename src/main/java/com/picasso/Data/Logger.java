@@ -9,16 +9,32 @@ import java.nio.file.Paths;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+/**
+ * Logger class is used to log messages to the log files.
+ * It uses three queues for three different types of log messages. 
+ * Each queue is processed by a separate thread.
+ */
 public class Logger {
+    // Queue for transitions log messages
     private static final BlockingQueue<LogEntry> transitionsQueue = new LinkedBlockingQueue<>();
+    // Queue for system log messages
     private static final BlockingQueue<LogEntry> systemQueue = new LinkedBlockingQueue<>();
+    // Queue for statistics log messages
     private static final BlockingQueue<LogEntry> statisticsQueue = new LinkedBlockingQueue<>();
 
+    // Directory where log files are stored
     private static final String LOG_DIR = "data/log";
+    
+    // Log file for transitions
     private static final String LOG_TRANSITIONS = "transitions.log";
+    // Log file for system
     private static final String LOG_SYSTEM = "system.log";
+    // Log file for statistics
     private static final String LOG_STATISTICS = "statistics.log";
 
+    /**
+     * Static block to initialize log files and start threads for processing queues.
+     */
     static {
         initializeLogDirectory();
         initializeLogFile(LOG_TRANSITIONS);
@@ -38,18 +54,44 @@ public class Logger {
         statisticsThread.start();
     }
 
+    /**
+     * Logs a transition message to the transitions log file.
+     * @param message Message to be logged.
+     */
     public static void logTransition(String message) {
         transitionsQueue.offer(new LogEntry(message, LOG_TRANSITIONS));
     }
 
+    /**
+     * Logs a system message to the system log file.
+     * @param message Message to be logged.
+     */
     public static void logSystem(String message) {
         systemQueue.offer(new LogEntry(message, LOG_SYSTEM));
     }
 
+    /**
+     * Logs a statistics message to the statistics log file.
+     * @param message Message to be logged.
+     */
     public static void logStatistics(String message) {
         statisticsQueue.offer(new LogEntry(message, LOG_STATISTICS));
     }
 
+    /**
+     * Shuts down the logger.
+     * It processes the queues and writes the remaining log entries to the log files.
+     */
+    public static void shutdown() {
+        shutdownQueue(transitionsQueue, LOG_TRANSITIONS);
+        shutdownQueue(systemQueue, LOG_SYSTEM);
+        shutdownQueue(statisticsQueue, LOG_STATISTICS);
+    }
+
+    /**
+     * Initializes the log directory.
+     * If the directory does not exist, it creates it.
+     */
     private static void initializeLogDirectory() {
         try {
             Files.createDirectories(Paths.get(LOG_DIR));
@@ -58,6 +100,10 @@ public class Logger {
         }
     }
 
+    /**
+     * Initializes the log file.
+     * @param fileName Name of the log file.
+     */
     private static void initializeLogFile(String fileName) {
         try {
             Path filePath = Paths.get(LOG_DIR, fileName);
@@ -71,6 +117,11 @@ public class Logger {
         }
     }
 
+    /**
+     * Processes the queue. It takes the log entry from the queue and writes it to the log file.
+     * @param logQueue Queue to be processed.
+     * @param fileName Name of the log file.
+     */
     private static void processQueue(BlockingQueue<LogEntry> logQueue, String fileName) {
         try {
             while (!Thread.interrupted()) {
@@ -85,6 +136,11 @@ public class Logger {
         }
     }
 
+    /**
+     * Writes the log entry to the log file.
+     * @param logEntry Log entry to be written.
+     * @param fileName Name of the log file.
+     */
     private static void writeToFile(LogEntry logEntry, String fileName) {
         try (BufferedWriter writer = new BufferedWriter(new FileWriter(Paths.get(LOG_DIR, fileName).toString(), true))) {
             writer.write(logEntry.getMessage());
@@ -94,12 +150,11 @@ public class Logger {
         }
     }
 
-    public static void shutdown() {
-        shutdownQueue(transitionsQueue, LOG_TRANSITIONS);
-        shutdownQueue(systemQueue, LOG_SYSTEM);
-        shutdownQueue(statisticsQueue, LOG_STATISTICS);
-    }
-
+    /**
+     * Processes the queue and writes the remaining log entries to the log file.
+     * @param logQueue Queue to be processed.
+     * @param fileName Name of the log file.
+     */
     private static void shutdownQueue(BlockingQueue<LogEntry> logQueue, String fileName) {
         while (!logQueue.isEmpty()) {
             LogEntry logEntry = logQueue.poll();
@@ -110,19 +165,38 @@ public class Logger {
     }
 }
 
+/**
+ * LogEntry class represents a log entry.
+ * It contains the message and the name of the log file.
+ */
 class LogEntry {
+    // Message to be logged
     private final String message;
+    // Name of the log file
     private final String fileName;
 
+    /**
+     * Constructor for LogEntry class.
+     * @param message Message to be logged.
+     * @param fileName Name of the log file.
+     */
     public LogEntry(String message, String fileName) {
         this.message = message;
         this.fileName = fileName;
     }
 
+    /**
+     * Returns the message.
+     * @return String Message to be logged.
+     */
     public String getMessage() {
         return message;
     }
 
+    /**
+     * Returns the name of the log file.
+     * @return String Name of the log file.
+     */
     public String getFileName() {
         return fileName;
     }

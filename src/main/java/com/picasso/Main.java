@@ -11,12 +11,19 @@ import com.picasso.Policy.*;
 import com.picasso.Segment.Segment;
 import com.picasso.Data.Logger;
 
+/**
+ * Main class is used to run the program.
+ */
 public class Main {
+    // Number of places of the Petri net.
     private static final int NUMBER_OF_PLACES = 18;
+    // Number of transitions of the Petri net.
     private static final int NUMBER_OF_TRANSITIONS = 12;
 
+    // Initial marking of the Petri net.
     private static final int[] INITIAL_MARKING = {0, 0, 0, 0, 0, 0, 4, 0, 0, 0, 4, 2, 2, 3, 1, 4, 6, 3};
 
+    // Incidence matrix of the Petri net.
     private static final int[][] INCIDENCE_MATRIX = { /*Matriz de incidencia*/
         //T1  T2  T3  T4  T5  T6  T7  T8  T9 T10 T11 T12
         {  1, -1, -1,  0,  0,  0,  0,  0,  0,  0,  0,  0}, //P1
@@ -39,12 +46,14 @@ public class Main {
         { -1,  1,  1,  0,  0,  0,  0,  0,  0, -1,  1,  0}, //CS3
     };
 
+    // Transitions of each invariant.
     private static final List<int[]> INVARIANTS_TRANSITIONS = List.of(
         new int[]{1, 2, 4, 6, 8},
         new int[]{1, 3, 5, 7, 8},
         new int[]{9, 10, 11, 12}
     );
 
+    // Transitions of each segment.
     private static final List<int[]> SEGMENT_TRANSITIONS = List.of(
         new int[]{1},
         new int[]{2, 4, 6},
@@ -53,10 +62,16 @@ public class Main {
         new int[]{9, 10, 11, 12}
     );
 
+    // Number of threads of each segment.
     private static final List<Integer> SEGMENT_THREADS = List.of(2, 4, 4, 1, 4);
 
+    // Time of execution until interrupting threads.
     private static final int TIME_EXECUTION = 1000;
 
+    /**
+     * Logs the statistics of the program.
+     * @param monitor Monitor of the Petri net.
+     */
     private static void logStatistics(Monitor monitor) {
         Logger.logStatistics("* ------------------------------ STATISTICS ------------------------------ *\n");
 
@@ -70,6 +85,10 @@ public class Main {
         Logger.logStatistics("\n* ------------------------------ STATISTICS ------------------------------ *");
     }
 
+    /**
+     * Main method of the program.
+     * @param args not used.
+     */
     public static void main(String[] args) {
         Logger.logSystem("* ------------------------------- PICASSO ------------------------------- *\n");
 
