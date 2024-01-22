@@ -62,8 +62,8 @@ public class PolicyMinTransitions implements Policy {
         int minTransition = -1;
 
         for (int transition : transitionsAbleToFire) {
-            if (transitionsFiredCount.get(transition - 1) < minTransitionsExecuted) {
-                minTransitionsExecuted = transitionsFiredCount.get(transition - 1);
+            if (transitionsFiredCount.get(transition) < minTransitionsExecuted) {
+                minTransitionsExecuted = transitionsFiredCount.get(transition);
                 minTransition = transition;
             }
         }
