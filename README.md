@@ -176,6 +176,10 @@ Este paquete contiene la clase que representa un segmento de la red de Petri.
 
 ### Diagrama de Clases
 
+<p align="center">
+  <img src="imgs/.png" alt="Diagrama de Clases">
+</p>
+
 ## Logs
 
 En el desarrollo de este proyecto, se ha implementado un sistema de registros de log para facilitar la comprensión y el seguimiento de las actividades realizadas por el sistema. Los registros de log son esenciales para la depuración, el monitoreo y la evaluación del rendimiento del sistema. A continuación, se detallan los tipos de logs utilizados y su significado:
@@ -261,5 +265,6 @@ FINISHED -> [Segment E - Thread 3]
 
 Estos ejemplos proporcionan una visión práctica de cómo interpretar los registros de log y cómo los diferentes tipos de logs contribuyen a la comprensión y el monitoreo efectivos del sistema.
 
-## Informe detallado
-Se anexa un informe detallado del proyecto en el archivo [`Informe.pdf`]().
+...
+
+Este README proporciona una visión resumida del sistema, si desea obtener más información, consulte el informe detallado en el archivo [`Informe.pdf`]().
