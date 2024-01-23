@@ -265,6 +265,6 @@ FINISHED -> [Segment E - Thread 3]
 
 Estos ejemplos proporcionan una visión práctica de cómo interpretar los registros de log y cómo los diferentes tipos de logs contribuyen a la comprensión y el monitoreo efectivos del sistema.
 
-...
+---
 
 Este README proporciona una visión resumida del sistema, si desea obtener más información, consulte el informe detallado en el archivo [`Informe.pdf`]().
