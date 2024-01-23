@@ -180,7 +180,7 @@ Este paquete contiene la clase que representa un segmento de la red de Petri.
 ### Diagrama de Clases
 
 <p align="center">
-  <img src="imgs/Diagrama_de_Clases.png" alt="Diagrama de Clases">
+  <img src="imgs/Diagrama_de_Clases.jpg" alt="Diagrama de Clases">
 </p>
 
 ## Logs
