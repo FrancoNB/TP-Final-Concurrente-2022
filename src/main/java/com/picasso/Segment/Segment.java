@@ -2,7 +2,6 @@ package com.picasso.Segment;
 
 import java.util.Map;
 
-import com.picasso.Artist.GenericArtist;
 import com.picasso.Data.Logger;
 import com.picasso.Artist.Artist;
 import com.picasso.Monitor.Monitor;
@@ -53,7 +52,7 @@ public class Segment implements Runnable {
                     Logger.logTransition(String.format("FIRED -> T%-2d ON %-35s", t, Thread.currentThread().getName()));
 
                     if (artist != null)
-                        ((GenericArtist)artist).work();
+                        artist.work();
                 }
             }         
         }
