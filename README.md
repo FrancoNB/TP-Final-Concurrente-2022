@@ -29,6 +29,9 @@ Vamos al directorio principal del proyecto y utilizamos el siguiente comando
 > [!NOTE]
 > Se requier Java JDK 8 o superior.
 
+> [!IMPORTANT]
+> El programa está configurado para ejecutarse durante un tiempo predeterminado, definido por la constante `TIME_EXECUTION` en la clase `Main`. Por defecto, el tiempo de ejecución está establecido en 60000 milisegundos (60 segundos). Puede ajustar este valor según sus preferencias en el código fuente. Luego de este tiempo de ejecución, el programa finalizará automáticamente. El resustado de la ejecución se puede encontrar en el directorio `data/log`.
+
 ## Descripción del Sistema
 El sistema se modela mediante una red de Petri, donde las plazas representan estados del sistema, recursos compartidos y buffers, mientras que las transiciones reflejan las actividades realizadas. La red se compone de elementos clave como P0, P1, P2, P3, P4, P5, P7, P8, P9 (plazas de actividades), P11, P12, P13, P14 (recursos compartidos) y P6, P10 (buffers inactivos). Finalemnte, las plazas CS1, CS2 y CS3 son plazas de control.
 
