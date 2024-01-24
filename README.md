@@ -272,6 +272,15 @@ FINISHED -> [Segment E - Thread 3]
 
 Estos ejemplos proporcionan una visión práctica de cómo interpretar los registros de log y cómo los diferentes tipos de logs contribuyen a la comprensión y el monitoreo efectivos del sistema.
 
+### Script de Análisis de Invairantes
+Finalmente se implemento un script en Python para analizar los invariantes activados durante la ejecución del sistema y verificar su validez. Este script se puede ejecutar con el siguiente comando:
+
+```console
+py CheckInvT.py
+```
+
+Si el script no detecta ningún error, se mostrará un mensaje de éxito. De lo contrario, se mostrará un mensaje de error con información detallada sobre el invariante que falló.
+
 ---
 
 Este README proporciona una visión resumida del sistema, si desea obtener más información, consulte el informe detallado en el archivo [`Informe.pdf`]().
