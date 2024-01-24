@@ -1,12 +1,11 @@
-package PetriNet;
+package com.picasso.PetriNet;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.ThreadLocalRandom;
 
-import Data.Logger;
+import com.picasso.Data.Logger;
 
 /**
  * PetriNet class Represents a Petri Net.
@@ -78,7 +77,7 @@ public class PetriNet extends PetriNetElement {
      */
     private void generatePlaces(int[] initialMarks, int cantPlaces) {
         for (int i = 0; i < cantPlaces; i++)
-            this.addPlace("Place" + (i + 1), initialMarks[i]);
+            this.addPlace("P" + (i + 1), initialMarks[i]);
 
         this.markings = initialMarks;
     }
@@ -89,7 +88,7 @@ public class PetriNet extends PetriNetElement {
      */
     private void generateTransitions(int cantTransitions) {
         for (int i = 0; i < cantTransitions; i++)
-            this.addTransition("Transition" + (i + 1));
+            this.addTransition("T" + (i + 1));
     }
 
     /**
@@ -114,7 +113,7 @@ public class PetriNet extends PetriNetElement {
     /**
      * Update the enabled transitions of the Petri Net according to the markings.
      */
-    private void updateTransitionsAbleToFire() {
+    private void updateEnabledTransitions() {
         enabledTransitions = new int[transitions.size()];
 
         for (int i = 0; i < transitions.size(); i++) {
@@ -129,6 +128,7 @@ public class PetriNet extends PetriNetElement {
                 }
 
                 enabledTransitions[i] = 1;
+
                 transitions.get(i).setTimeStamp();
             }
         }
@@ -144,26 +144,7 @@ public class PetriNet extends PetriNetElement {
 
         this.states.add(markings.clone());
 
-        updateTransitionsAbleToFire();
-    }
-
-    /**
-     * Check if the Petri Net is in deadlock.
-     * @return True if the Petri Net is in deadlock.
-     *         False otherwise.
-     */
-    private boolean checkDeadlock() {
-        int[] enabled = getEnableTransitions();
-        int test = 0;
-
-        for(int i = 0; i < transitions.size(); i++)
-            if(enabled[i] == 0)
-                test++;
-
-        if(test == transitions.size())
-            return true;
-
-        return false;
+        updateEnabledTransitions();
     }
 
     /**
@@ -193,7 +174,42 @@ public class PetriNet extends PetriNetElement {
 
         generateIncidences(incidenceMatrix, cantPlaces, cantTransitions);
 
-        updateTransitionsAbleToFire();
+        updateEnabledTransitions();
+    }
+
+    /**
+     * Check the timed state of the transition passed as argument.
+     * @param transition Transition to check.
+     * @return Timed state of the transition:
+     *          * NO_TIMED if the transition is not timed.
+     *          * IN_WINDOW if the transition is timed and the current time is in the time frame.
+     *          * BEFORE_WINDOW if the transition is timed and the current time is before the time frame.
+     *          * AFTER_WINDOW if the transition is timed and the current time is after the time frame.
+     */
+    public Transition.TimedState checkTimedStateTransition(int transition) {
+        Transition t = getTransition(transition);
+
+        if (t.isTimed()) {
+            long currentTime = System.currentTimeMillis();
+            long time = currentTime - t.getTimeStamp();
+
+            if (time < t.getAlfaTime())
+            {
+                Logger.logTimed("COOL-DOWN -> " + t.getName() + " (" + time + "[ms] < " + t.getAlfaTime() + "[ms])");
+
+                return Transition.TimedState.BEFORE_WINDOW;
+            }
+            else if (time <= t.getBetaTime())
+                return Transition.TimedState.IN_WINDOW;
+            else
+            {
+                Logger.logTimed("TIME-OUT - " + t.getName() + " (" + time + "[ms] > " + t.getBetaTime() + "[ms])");
+
+                return Transition.TimedState.AFTER_WINDOW;
+            }
+        }
+
+        return Transition.TimedState.NO_TIMED;
     }
 
     /**
@@ -217,41 +233,6 @@ public class PetriNet extends PetriNetElement {
     }
 
     /**
-     * Get the timed transitions of the Petri Net.
-     * @return Array with all transitions of the Petri Net.
-     *         1 if the transition is timed, 0 otherwise.
-     */
-    public int[] getTimeSensibleTransitions() {
-        int[] arr = new int[transitions.size()];
-
-        for (int i = 0; i < transitions.size(); i++) {
-            if (transitions.get(i).isTimed()) 
-                arr[i] = 1;
-            else
-                arr[i] = 0;
-        }
-
-        return arr;
-    }
-
-    /**
-     * Get the time frame of the transition in the Petri Net.
-     * @return Bidimensional array with the time frame of each transition.
-     *         The first column is the alfa time and the second column is the beta time.
-     *         If the transition is not timed, the time frame is set to 0.
-     */
-    public long[][] getTransitionsTimeRange() {
-        long[][] arr = new long[transitions.size()][2];
-
-        for (int i = 0; i < transitions.size(); i++) {
-            arr[i][0] = transitions.get(i).getAlfaTime();
-            arr[i][1] = transitions.get(i).getBetaTime();
-        }
-
-        return arr;
-    }
-
-    /**
      * Get the enabled transitions of the Petri Net.
      * @return Array with all enabled transitions of the Petri Net.
      */
@@ -259,20 +240,12 @@ public class PetriNet extends PetriNetElement {
         return enabledTransitions;
     }
 
-    /**
-     * Getter for the places of the Petri Net.
-     * @return List of places of the Petri Net.
-     */
-    public List<Place> getPlaces() {
-        return places;
+    public Transition getTransition(int index) {
+        return transitions.get(index - 1);
     }
 
-    /**
-     * Getter for the transitions of the Petri Net.
-     * @return List of transitions of the Petri Net.
-     */
-    public List<Transition> getTransitions() {
-        return transitions;
+    public int getNumberOfTransitions() {
+        return transitions.size();
     }
 
     /**
@@ -300,19 +273,19 @@ public class PetriNet extends PetriNetElement {
     }
 
     /**
-     * Getter for the markings of the Petri Net.
-     * @return Array with the markings of the Petri Net.
-     */
-    public int[] getMarkings() {
-        return markings;
-    }
-
-    /**
      * Getter for the initial markings of the Petri Net.
      * @return Array with the initial markings of the Petri Net.
      */
     public int[] getInitialMarking() {
         return initialMarking;
+    }
+
+    /**
+     * Getter for the current markings of the Petri Net.
+     * @return Array with the current markings of the Petri Net.
+     */
+    public int[] getCurrentMarking() {
+        return markings;
     }
 
     /**
@@ -359,39 +332,21 @@ public class PetriNet extends PetriNetElement {
      * Fire the transition passed as argument and log the transition fired.
      * @param transition Transition to fire. 
      * @param log Logger to log the transition fired.
+     * @return True if the transition was fired.
+     *         False otherwise.
      */
-    public void fireTransition(int transition, Logger log) {
+    public boolean fireTransition(int transition) {
         Transition t = transitions.get(transition - 1);
 
         if (t.canFire())
         {
             t.fire();
-
-            log.logTransitions(getName());
             
             updateNet(transition);
+
+            return true;
         }
-    }
 
-    /**
-     * Fire randomly a transition of the Petri Net until the time passed as argument is reached or the Petri Net is in deadlock. Log the transitions fired.
-     * @param time Maximum time to fire transitions.
-     * @param log Logger to log the transitions fired.
-     */
-    public void fireContinuously(int time, Logger log) {
-        long startTime = System.currentTimeMillis();
-        long endTime = startTime + time * 1000;
-
-        while(System.currentTimeMillis() <  endTime) {
-            int i = ThreadLocalRandom.current().nextInt(1, transitions.size());
-
-            fireTransition(i, log);
-
-            if (checkDeadlock())
-            {
-                System.out.println("---------- DEADLOCK ----------");
-                break;
-            }
-        }
+        return false;
     }
 }

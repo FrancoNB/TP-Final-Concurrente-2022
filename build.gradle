@@ -1,0 +1,31 @@
+plugins {
+    id 'java'
+}
+
+repositories {
+    // Puedes agregar repositorios si necesitas dependencias externas
+}
+
+dependencies {
+    // Puedes agregar dependencias si es necesario
+}
+
+sourceSets {
+    main {
+        java {
+            srcDirs = ['src/main/java']
+        }
+    }
+}
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+jar {
+    manifest {
+        attributes(
+            'Main-Class': 'com.picasso.Main'
+        )
+    }
+}

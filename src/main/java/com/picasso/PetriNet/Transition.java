@@ -1,4 +1,4 @@
-package PetriNet;
+package com.picasso.PetriNet;
 
 import java.util.ArrayList;
 import java.util.Date;
@@ -16,10 +16,20 @@ public class Transition extends PetriNetElement {
     private long alfaTime;
     // Instant when the transition is desensibilized
     private long betaTime;
-    // Last time the transition was fired
-    private long time;
+    // Last time the transition was sensibilized
+    private long sensitizedTime;
     // True if the transition is timed
     private boolean timed;
+
+    /**
+     * Timed transition states enumeration
+     */
+    public enum TimedState {
+        NO_TIMED,
+        IN_WINDOW,
+        BEFORE_WINDOW,
+        AFTER_WINDOW
+    };
 
     /**
      * Constructor for Transition class set timed to false
@@ -57,7 +67,7 @@ public class Transition extends PetriNetElement {
      */
     public void setTimeStamp() {
         if (timed)
-            time = new Date().getTime();
+            sensitizedTime = new Date().getTime();
     }
 
     /**
@@ -65,7 +75,7 @@ public class Transition extends PetriNetElement {
      * @return Last time the transition was fired
      */
     public long getTimeStamp() {
-        return time;
+        return sensitizedTime;
     }
 
     /**

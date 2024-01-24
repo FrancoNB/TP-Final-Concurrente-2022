@@ -1,4 +1,4 @@
-package PetriNet;
+package com.picasso.PetriNet;
 
 /**
  * Place class

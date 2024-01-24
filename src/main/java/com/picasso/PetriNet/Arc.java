@@ -1,4 +1,4 @@
-package PetriNet;
+package com.picasso.PetriNet;
 
 /**
  * Arc class represents an arc in a Petri Net
