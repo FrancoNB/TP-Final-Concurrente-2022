@@ -283,4 +283,4 @@ Si el script no detecta ningún error, se mostrará un mensaje de éxito. De lo 
 
 ---
 
-Este README proporciona una visión resumida del sistema, si desea obtener más información, puede consultar el informe detalla y demas archivos anexos en el siguiente [enlace](https://drive.google.com/drive/folders/120YshBjFMGuJKOPTZBvGL8OIhh4y7tks).
+Este *README* proporciona una visión resumida del sistema, si desea obtener más información, puede consultar el informe detalla y demas archivos anexos en el siguiente [enlace](https://drive.google.com/drive/folders/120YshBjFMGuJKOPTZBvGL8OIhh4y7tks).
