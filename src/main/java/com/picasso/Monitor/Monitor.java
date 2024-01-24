@@ -27,10 +27,12 @@ public class Monitor {
     private final Map<Integer, Integer> transitionsFiredCount;
     // Map of invariants and their count
     private final Map<int[], Integer> invariantsTransitionsFiredCount;
+    // Map of transitions fired in invariant cicle
+    private final Map<int[], Map<Integer, Integer>> transitionsFiredInInvariantCicle;
     // Policy for deciding which transition to fire next
     private Policy policy;
-    // Flag for interrupting threads
-    private boolean isInterrupted;
+    // Flag to indicate if the monitor was interrupted
+    private boolean interrupted;
 
     /**
      * Returns an array of transitions that are waiting to be fired.
@@ -61,14 +63,104 @@ public class Monitor {
     private void UpdateFiredCounts(int transitionFired) {
         transitionsFiredCount.put(transitionFired, transitionsFiredCount.get(transitionFired) + 1);
 
+        transitionsFiredInInvariantCicle.keySet().stream()
+            .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
+            .forEach(invariant -> {
+                transitionsFiredInInvariantCicle.get(invariant).put(transitionFired, transitionsFiredInInvariantCicle.get(invariant).get(transitionFired) + 1);
+            });
+
         invariantsTransitionsFiredCount.keySet().stream()
             .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
-            .findFirst()
-            .ifPresent(invariant -> {
-                if (Arrays.stream(invariant).allMatch(t -> transitionsFiredCount.get(t) > invariantsTransitionsFiredCount.get(invariant))) {
+            .forEach(invariant -> {
+                if (Arrays.stream(invariant).allMatch(t -> transitionsFiredInInvariantCicle.get(invariant).get(t) > 0)) {
                     invariantsTransitionsFiredCount.put(invariant, invariantsTransitionsFiredCount.get(invariant) + 1);
+
+                    transitionsFiredInInvariantCicle.get(invariant).keySet()
+                        .forEach(t -> transitionsFiredInInvariantCicle.get(invariant).put(t, transitionsFiredInInvariantCicle.get(invariant).get(t) - 1));
                 }
             });
+    }
+
+    /**
+     * Sets the interrupted flag to true and signals all the threads in the wait queue.
+     */
+    private void setInterrupted() {
+        if (mutex.isLocked())
+        {
+            interrupted = true;
+            Arrays.stream(waitQueue).forEach(c -> c.signalAll());
+        }
+        else
+        {
+            try {
+                mutex.lock();
+                
+                interrupted = true;
+                Arrays.stream(waitQueue).forEach(c -> c.signalAll());
+            } finally {
+                mutex.unlock();
+            }
+        }
+    }
+
+    /**
+     * Sends the thread to the wait queue of the transition.
+     * @param transition Transition to send the thread.
+     */
+    private void sendToWaitQueue(int transition)
+    {
+        try {
+            waitQueue[transition - 1].await();
+        }
+        catch (InterruptedException e) {
+            setInterrupted();
+        }
+    }
+
+    /**
+     * Sends the thread to the wait queue of the transition. Whit a sleep time.
+     * @param transition Transition to send the thread.
+     * @param sleepTime Time to sleep.
+     */
+    private void sendToWaitQueue(int transition, long sleepTime)
+    {
+        try {
+            waitQueue[transition - 1].await(sleepTime, TimeUnit.MILLISECONDS);
+        }
+        catch (InterruptedException e) {
+            setInterrupted();
+        }
+    }
+
+    /**
+     * Checks if the transition is in a timed state. If it is, the thread sleeps until the transition is in a firing state.
+     * @param transition Transition to check.
+     */
+    private void checkTimedStateTransition(int transition) {
+        Transition.TimedState timedState;
+
+        while (true) {
+            timedState = petriNet.checkTimedStateTransition(transition);
+            
+            if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
+                break;
+
+            if (timedState == Transition.TimedState.BEFORE_WINDOW) {
+                long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
+
+                sendToWaitQueue(transition, sleepTime);
+
+                if (interrupted)
+                    break;
+
+                continue;
+            }
+
+            if (interrupted)
+                break;
+
+            sendToWaitQueue(transition);
+        }
     }
 
     /**
@@ -80,16 +172,25 @@ public class Monitor {
     public Monitor(PetriNet petriNet, Policy policy, List<int[]> invariantsTransitions) {
         this.petriNet = petriNet;
         this.policy = policy;
-
-        isInterrupted = false;
+        this.interrupted = false;
 
         this.mutex = new ReentrantLock();
 
         this.transitionsFiredCount = IntStream.range(1, petriNet.getNumberOfTransitions() + 1)
-                                             .collect(HashMap::new, (m, v) -> m.put(v, 0), HashMap::putAll);
+                                              .collect(HashMap::new, (m, v) -> m.put(v, 0), HashMap::putAll);
 
         this.invariantsTransitionsFiredCount = IntStream.range(0, invariantsTransitions.size())
-                                              .collect(HashMap::new, (m, v) -> m.put(invariantsTransitions.get(v), 0), HashMap::putAll);
+                                                        .collect(HashMap::new, (m, v) -> m.put(invariantsTransitions.get(v), 0), HashMap::putAll);
+
+        this.transitionsFiredInInvariantCicle = IntStream.range(0, invariantsTransitions.size())
+                                                         .collect(HashMap::new, (m, v) -> m.put(invariantsTransitions.get(v), new HashMap<Integer, Integer>()), HashMap::putAll);
+
+        transitionsFiredInInvariantCicle.keySet().stream()
+            .forEach(invariant -> {
+                for (int transition : invariant) {
+                    transitionsFiredInInvariantCicle.get(invariant).put(transition, 0);
+                }
+            });
 
         this.waitQueue = IntStream.range(0, petriNet.getNumberOfTransitions())
                                   .mapToObj(i -> mutex.newCondition())
@@ -97,11 +198,40 @@ public class Monitor {
     }
 
     /**
+     * Getter for the interrupted flag.
+     * @return True if the thread was interrupted.
+     *         False otherwise.
+     */
+    public boolean isInterrupted() {
+        if (mutex.isLocked())
+            return interrupted;
+        else {
+            try {
+                mutex.lock();
+                
+                return interrupted;
+            } finally {
+                mutex.unlock();
+            }
+        }
+    }
+
+    /**
      * Returns the transitions fired count map.
      * @return Transitions fired count map.
      */
     public Map<Integer, Integer> getTransitionsFiredCount() {
-        return transitionsFiredCount;
+        if (mutex.isLocked())
+            return transitionsFiredCount;
+        else {
+            try {
+                mutex.lock();
+                
+                return transitionsFiredCount;
+            } finally {
+                mutex.unlock();
+            }
+        }
     }
 
     /**
@@ -109,7 +239,17 @@ public class Monitor {
      * @return Invariants transitions fired count map.
      */
     public Map<int[], Integer> getInvariantsTransitionsFiredCount() {
-        return invariantsTransitionsFiredCount;
+        if (mutex.isLocked())
+            return invariantsTransitionsFiredCount;
+        else {
+            try {
+                mutex.lock();
+                
+                return invariantsTransitionsFiredCount;
+            } finally {
+                mutex.unlock();
+            }
+        }
     }
 
     /**
@@ -123,67 +263,39 @@ public class Monitor {
     /**
      * Fires a transition. If the transition is not enabled, the thread sleeps until other thread fires a transition that enables the transition.
      * @param transition Transition to be fired.
-     * @throws InterruptedException If the thread is interrupted.
      */
-    public void fireTransition(int transition) throws InterruptedException {
+    public boolean fireTransition(int transition) {
+        boolean fired = false;
+
         try {
             mutex.lock();
 
-            Transition.TimedState timedState;
+            if(!interrupted)
+                checkTimedStateTransition(transition);
 
-            while (true) {
-                timedState = petriNet.checkTimedStateTransition(transition);
-                
-                if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
-                    break;
+            while (!petriNet.isEnabled(transition) && !interrupted)
+                sendToWaitQueue(transition);
 
-                if (timedState == Transition.TimedState.BEFORE_WINDOW) {
-                    long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
+            fired = petriNet.fireTransition(transition);
 
-                    waitQueue[transition - 1].await(sleepTime, TimeUnit.MILLISECONDS);
-
-                    if (isInterrupted)
-                        throw new InterruptedException();
-
-                    continue;
-                }
-
-                waitQueue[transition - 1].await();
-
-                if (isInterrupted)
-                    throw new InterruptedException();
-            }
-
-            while (!petriNet.isEnabled(transition)) {
-                waitQueue[transition - 1].await();
-
-                if (isInterrupted)
-                    throw new InterruptedException();
-            }
+            if (fired)
+                UpdateFiredCounts(transition);
             
-            petriNet.fireTransition(transition);
-
             int[] waitTransitions = getWaitTransitions();
 
             int[] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
-
-            UpdateFiredCounts(transition);
-
+            
             int nextTransition = policy.decide(transitionsAbleToFire, transitionsFiredCount, invariantsTransitionsFiredCount);
 
             if (nextTransition > 0)
                 waitQueue[nextTransition - 1].signalAll();
         } catch (IllegalMonitorStateException e) {
             e.printStackTrace();
-        } catch (InterruptedException e) {
-            for (Condition condition : waitQueue)
-                condition.signalAll();
-
-            isInterrupted = true;
-
-            throw e;
+            System.exit(1);
         } finally {
             mutex.unlock();
         }
+
+        return fired;
     }
 }

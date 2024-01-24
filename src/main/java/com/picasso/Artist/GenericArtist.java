@@ -3,7 +3,7 @@ package com.picasso.Artist;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 
-import com.picasso.Main;
+import com.picasso.Config;
 import com.picasso.Data.Logger;
 
 /**
@@ -33,8 +33,13 @@ public abstract class GenericArtist implements Artist {
      * Work method is used to simulate the work of artist.
      * @throws InterruptedException if the thread is interrupted.
      */
-    public void work() throws InterruptedException {
-        TimeUnit.MILLISECONDS.sleep(random.nextInt() % (maxTime - minTime) + minTime);
-        Logger.logArtist(String.format("[%d] WORK END -> %-35s", (System.currentTimeMillis() - Main.startTime), this.toString()));
+    public void work() {
+        try {
+            TimeUnit.MILLISECONDS.sleep(random.nextInt() % (maxTime - minTime) + minTime);
+            
+            Logger.logArtist(String.format("[%d] WORKED -> %-35s", (System.currentTimeMillis() - Config.START_TIME), this.toString()));
+        } catch (InterruptedException e) {
+            Logger.logArtist(String.format("[%d] WORK INTERRUPTED -> %-35s", (System.currentTimeMillis() - Config.START_TIME), this.toString()));
+        }
     }
 }

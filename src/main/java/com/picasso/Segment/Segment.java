@@ -43,21 +43,18 @@ public class Segment implements Runnable {
     @Override
     public void run() {
         try {
-            while (!Thread.interrupted()) {
-                for (Integer t : transitions.keySet()) {
+            while (!monitor.isInterrupted()) {
+                for (int t : transitions.keySet()) {
                     Artist artist = transitions.get(t);
 
-                    monitor.fireTransition(t);
-                    
-                    Logger.logTransition(String.format("FIRED -> T%-2d ON %-35s", t, Thread.currentThread().getName()));
+                    if (monitor.fireTransition(t)) {
+                        Logger.logTransition(String.format("FIRED -> T%-2d ON %-35s", t, Thread.currentThread().getName()));
 
-                    if (artist != null)
-                        artist.work();
+                        if (artist != null)
+                            artist.work();
+                    }
                 }
             }         
-        }
-        catch (InterruptedException e) {
-            Thread.currentThread().interrupt();      
         }
         finally {
             Logger.logSystem(String.format("FINISHED -> %-35s", Thread.currentThread().getName()));

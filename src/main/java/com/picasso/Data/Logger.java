@@ -23,6 +23,8 @@ public class Logger {
     private static final BlockingQueue<LogEntry> statisticsQueue = new LinkedBlockingQueue<>();
     // Queue for artist log messages
     private static final BlockingQueue<LogEntry> artistQueue = new LinkedBlockingQueue<>();
+    // Queue for timed out of windows results
+    private static final BlockingQueue<LogEntry> timedQueue = new LinkedBlockingQueue<>();
 
     // Directory where log files are stored
     private static final String LOG_DIR = "data/log";
@@ -35,6 +37,8 @@ public class Logger {
     private static final String LOG_STATISTICS = "statistics.log";
     // Log file for artists
     private static final String LOG_ARTIST = "artist.log";
+    // log timed out of windows results
+    private static final String LOG_TIMED = "timed.log";
 
     /**
      * Static block to initialize log files and start threads for processing queues.
@@ -45,6 +49,7 @@ public class Logger {
         initializeLogFile(LOG_SYSTEM);
         initializeLogFile(LOG_STATISTICS);
         initializeLogFile(LOG_ARTIST);
+        initializeLogFile(LOG_TIMED);
 
         Thread transitionsThread = new Thread(() -> processQueue(transitionsQueue, LOG_TRANSITIONS), "[Logger Transitions - Thread 0]");
         transitionsThread.setDaemon(true);
@@ -61,6 +66,10 @@ public class Logger {
         Thread artistThread = new Thread(() -> processQueue(artistQueue, LOG_ARTIST), "[Logger Artist - Thread 3]");
         artistThread.setDaemon(true);
         artistThread.start();
+
+        Thread timedThread = new Thread(() -> processQueue(timedQueue, LOG_TIMED), "[Logger Timed - Thread 4]");
+        timedThread.setDaemon(true);
+        timedThread.start();
     }
 
     /**
@@ -96,6 +105,14 @@ public class Logger {
     }
 
     /**
+     * Logs a timed out of windows result to the timed log file.
+     * @param message Message to be logged.
+     */
+    public static void logTimed(String message) {
+        timedQueue.offer(new LogEntry(message, LOG_TIMED));
+    }
+
+    /**
      * Shuts down the logger.
      * It processes the queues and writes the remaining log entries to the log files.
      */
@@ -103,6 +120,8 @@ public class Logger {
         shutdownQueue(transitionsQueue, LOG_TRANSITIONS);
         shutdownQueue(systemQueue, LOG_SYSTEM);
         shutdownQueue(statisticsQueue, LOG_STATISTICS);
+        shutdownQueue(artistQueue, LOG_ARTIST);
+        shutdownQueue(timedQueue, LOG_TIMED);
     }
 
     /**

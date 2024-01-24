@@ -195,7 +195,7 @@ public class PetriNet extends PetriNetElement {
 
             if (time < t.getAlfaTime())
             {
-                Logger.logTransition("COOL-DOWN -> " + t.getName() + " (" + time + "[ms] < " + t.getAlfaTime() + "[ms])");
+                Logger.logTimed("COOL-DOWN -> " + t.getName() + " (" + time + "[ms] < " + t.getAlfaTime() + "[ms])");
 
                 return Transition.TimedState.BEFORE_WINDOW;
             }
@@ -203,7 +203,7 @@ public class PetriNet extends PetriNetElement {
                 return Transition.TimedState.IN_WINDOW;
             else
             {
-                Logger.logTransition("TIME-OUT - " + t.getName() + " (" + time + "[ms] > " + t.getBetaTime() + "[ms])");
+                Logger.logTimed("TIME-OUT - " + t.getName() + " (" + time + "[ms] > " + t.getBetaTime() + "[ms])");
 
                 return Transition.TimedState.AFTER_WINDOW;
             }
@@ -273,19 +273,19 @@ public class PetriNet extends PetriNetElement {
     }
 
     /**
-     * Getter for the markings of the Petri Net.
-     * @return Array with the markings of the Petri Net.
-     */
-    public int[] getMarkings() {
-        return markings;
-    }
-
-    /**
      * Getter for the initial markings of the Petri Net.
      * @return Array with the initial markings of the Petri Net.
      */
     public int[] getInitialMarking() {
         return initialMarking;
+    }
+
+    /**
+     * Getter for the current markings of the Petri Net.
+     * @return Array with the current markings of the Petri Net.
+     */
+    public int[] getCurrentMarking() {
+        return markings;
     }
 
     /**
@@ -332,8 +332,10 @@ public class PetriNet extends PetriNetElement {
      * Fire the transition passed as argument and log the transition fired.
      * @param transition Transition to fire. 
      * @param log Logger to log the transition fired.
+     * @return True if the transition was fired.
+     *         False otherwise.
      */
-    public void fireTransition(int transition) {
+    public boolean fireTransition(int transition) {
         Transition t = transitions.get(transition - 1);
 
         if (t.canFire())
@@ -341,6 +343,10 @@ public class PetriNet extends PetriNetElement {
             t.fire();
             
             updateNet(transition);
+
+            return true;
         }
+
+        return false;
     }
 }
