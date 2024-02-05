@@ -71,7 +71,7 @@ public class Main {
             boolean end = true;
 
             for(int t : Config.FINAL_TRANSITIONS) {
-                if (monitor.fireTransition(t)) {
+                if (monitor.fireTransition(t, true)) {
                     Logger.logTransition(String.format("FIRED -> T%-2d ON [%s]", t, Thread.currentThread().getName()));
 
                     Config.SEGMENT_TRANSITIONS.forEach(segment -> {
