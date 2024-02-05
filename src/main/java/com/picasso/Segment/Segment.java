@@ -47,7 +47,7 @@ public class Segment implements Runnable {
                 for (int t : transitions.keySet()) {
                     Artist artist = transitions.get(t);
 
-                    if (monitor.fireTransition(t)) {
+                    if (monitor.fireTransition(t, false)) {
                         Logger.logTransition(String.format("FIRED -> T%-2d ON %-35s", t, Thread.currentThread().getName()));
 
                         if (artist != null)

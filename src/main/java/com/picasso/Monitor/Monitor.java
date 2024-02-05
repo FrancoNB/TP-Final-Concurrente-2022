@@ -79,6 +79,13 @@ public class Monitor {
                         .forEach(t -> transitionsFiredInInvariantCicle.get(invariant).put(t, transitionsFiredInInvariantCicle.get(invariant).get(t) - 1));
                 }
             });
+
+        System.out.print("Current marking: [ ");
+
+        for (int m : petriNet.getCurrentMarking())
+            System.out.print(m + " ");
+
+        System.out.println(" ]");
     }
 
     /**
@@ -94,7 +101,6 @@ public class Monitor {
         {
             try {
                 mutex.lock();
-                
                 interrupted = true;
                 Arrays.stream(waitQueue).forEach(c -> c.signalAll());
             } finally {
@@ -133,34 +139,31 @@ public class Monitor {
     }
 
     /**
-     * Checks if the transition is in a timed state. If it is, the thread sleeps until the transition is in a firing state.
+     * Checks if the transition is able to fire. If not, sends the thread to the wait queue.
      * @param transition Transition to check.
      */
-    private void checkTimedStateTransition(int transition) {
+    private boolean checkStateTransition(int transition) {
         Transition.TimedState timedState;
 
-        while (true) {
+        while (!interrupted) {
             timedState = petriNet.checkTimedStateTransition(transition);
             
             if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
-                break;
+                if (petriNet.isEnabled(transition))
+                    return false;
 
             if (timedState == Transition.TimedState.BEFORE_WINDOW) {
                 long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
 
                 sendToWaitQueue(transition, sleepTime);
 
-                if (interrupted)
-                    break;
-
                 continue;
             }
 
-            if (interrupted)
-                break;
-
             sendToWaitQueue(transition);
         }
+
+        return true;
     }
 
     /**
@@ -273,32 +276,35 @@ public class Monitor {
     /**
      * Fires a transition. If the transition is not enabled, the thread sleeps until other thread fires a transition that enables the transition.
      * @param transition Transition to be fired.
+     * @param endTransitions Flag to indicate if the transition is a final transition.
      */
-    public boolean fireTransition(int transition) {
+    public boolean fireTransition(int transition, boolean endTransitions) {
         boolean fired = false;
+        boolean abort = false;
 
         try {
             mutex.lock();
 
-            if(!interrupted)
-                checkTimedStateTransition(transition);
+            if(!endTransitions)
+                abort = checkStateTransition(transition);
 
-            while (!petriNet.isEnabled(transition) && !interrupted)
-                sendToWaitQueue(transition);
+            if (!abort) {
+                fired = petriNet.fireTransition(transition);
 
-            fired = petriNet.fireTransition(transition);
+                if (fired)
+                    UpdateFiredCounts(transition);
 
-            if (fired)
-                UpdateFiredCounts(transition);
-            
-            int[] waitTransitions = getWaitTransitions();
+                if (!endTransitions) {
+                    int[] waitTransitions = getWaitTransitions();
 
-            int[] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
-            
-            int nextTransition = policy.decide(transitionsAbleToFire, transitionsFiredCount, invariantsTransitionsFiredCount);
-
-            if (nextTransition > 0)
-                waitQueue[nextTransition - 1].signalAll();
+                    int[] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
+                    
+                    int nextTransition = policy.decide(transitionsAbleToFire, transitionsFiredCount, invariantsTransitionsFiredCount);
+    
+                    if (nextTransition > 0)
+                        waitQueue[nextTransition - 1].signalAll();
+                }
+            } 
         } catch (IllegalMonitorStateException e) {
             e.printStackTrace();
             System.exit(1);
