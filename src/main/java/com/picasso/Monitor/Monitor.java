@@ -257,7 +257,17 @@ public class Monitor {
      * @param policy Policy for deciding which transition to fire next.
      */
     public void changePolicy(Policy policy) {
-        this.policy = policy;
+        if (mutex.isLocked())
+            this.policy = policy;
+        else {
+            try {
+                mutex.lock();
+                
+                this.policy = policy;
+            } finally {
+                mutex.unlock();
+            }
+        }
     }
 
     /**
