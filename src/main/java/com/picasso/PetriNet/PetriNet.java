@@ -229,7 +229,7 @@ public class PetriNet extends PetriNetElement {
      *         False otherwise.
      */ 
     public boolean isTimedTransition(int transition) {
-        return (transitions.get((transition - 1)).isTimed());
+        return (getTransition(transition).isTimed());
     }
 
     /**
@@ -336,7 +336,7 @@ public class PetriNet extends PetriNetElement {
      *         False otherwise.
      */
     public boolean fireTransition(int transition) {
-        Transition t = transitions.get(transition - 1);
+        Transition t = getTransition(transition);
 
         if (t.canFire())
         {

@@ -82,14 +82,14 @@ public abstract class Config {
 
     // Time alpha and beta of each timed transition.
     public static final List<int[]> TIMED_TRANSITIONS = List.of(
-        new int[]{3, 43},   // T4
-        new int[]{5, 45},   // T5
-        new int[]{19, 69},  // T6
-        new int[]{7, 67},   // T7
-        new int[]{26, 106},  // T8
-        new int[]{9, 19},    // T10
-        new int[]{8, 28},   // T11
-        new int[]{12, 32}    // T12
+        new int[]{3, 63},   // T4
+        new int[]{5, 65},   // T5
+        new int[]{19, 94},  // T6
+        new int[]{7, 97},   // T7
+        new int[]{26, 146},  // T8
+        new int[]{9, 24},    // T10
+        new int[]{8, 38},   // T11
+        new int[]{12, 42}    // T12
     );
 
     // Number of threads of each segment.
