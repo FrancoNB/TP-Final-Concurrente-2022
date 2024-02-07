@@ -96,5 +96,5 @@ public abstract class Config {
     public static final List<Integer> SEGMENT_THREADS = List.of(2, 4, 4, 1, 4);
 
     // Time of execution until interrupting threads.
-    public static final int TIME_EXECUTION = 60000;
+    public static final int TIME_EXECUTION = 10000;
 }
