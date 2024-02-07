@@ -39,9 +39,15 @@ public class Monitor {
      * @return Array of transitions that are waiting to be fired.
      */
     private int[] getWaitTransitions() {
-        return IntStream.range(0, waitQueue.length)
-                        .map(i -> mutex.hasWaiters(waitQueue[i]) ? 1 : 0)
-                        .toArray();
+        try {
+            mutex.lock();
+
+            return IntStream.range(0, waitQueue.length)
+                            .map(i -> mutex.hasWaiters(waitQueue[i]) ? 1 : 0)
+                            .toArray();
+        } finally {
+            mutex.unlock();
+        }
     }
 
     /**
@@ -50,10 +56,16 @@ public class Monitor {
      * @return Array of transitions that are able to fire.
      */
     private int[] getTransitionsAbleToFire(int[] transitions) {
-        return IntStream.range(0, waitQueue.length)
-                        .map(i -> (petriNet.getEnableTransitions()[i] == 1 && transitions[i] == 1) ? (i + 1) : 0)
-                        .filter(element -> element != 0)
-                        .toArray();
+        try {
+            mutex.lock();
+
+            return IntStream.range(0, waitQueue.length)
+                            .map(i -> (petriNet.getEnableTransitions()[i] == 1 && transitions[i] == 1) ? (i + 1) : 0)
+                            .filter(element -> element != 0)
+                            .toArray();
+        } finally {
+            mutex.unlock();
+        }
     }
 
     /**
@@ -61,109 +73,47 @@ public class Monitor {
      * @param transitionFired Transition that was fired.
      */
     private void UpdateFiredCounts(int transitionFired) {
-        transitionsFiredCount.put(transitionFired, transitionsFiredCount.get(transitionFired) + 1);
+        try {
+            mutex.lock();
+            System.out.println("Thread " + Thread.currentThread().getName() + " in UpdateFiredCounts");
 
-        transitionsFiredInInvariantCicle.keySet().stream()
-            .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
-            .forEach(invariant -> {
-                transitionsFiredInInvariantCicle.get(invariant).put(transitionFired, transitionsFiredInInvariantCicle.get(invariant).get(transitionFired) + 1);
-            });
+            transitionsFiredCount.put(transitionFired, transitionsFiredCount.get(transitionFired) + 1);
 
-        invariantsTransitionsFiredCount.keySet().stream()
-            .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
-            .forEach(invariant -> {
-                if (Arrays.stream(invariant).allMatch(t -> transitionsFiredInInvariantCicle.get(invariant).get(t) > 0)) {
-                    invariantsTransitionsFiredCount.put(invariant, invariantsTransitionsFiredCount.get(invariant) + 1);
+            transitionsFiredInInvariantCicle.keySet().stream()
+                .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
+                .forEach(invariant -> {
+                    transitionsFiredInInvariantCicle.get(invariant).put(transitionFired, transitionsFiredInInvariantCicle.get(invariant).get(transitionFired) + 1);
+                });
 
-                    transitionsFiredInInvariantCicle.get(invariant).keySet()
-                        .forEach(t -> transitionsFiredInInvariantCicle.get(invariant).put(t, transitionsFiredInInvariantCicle.get(invariant).get(t) - 1));
-                }
-            });
+            invariantsTransitionsFiredCount.keySet().stream()
+                .filter(i -> Arrays.stream(i).anyMatch(t -> t == transitionFired))
+                .forEach(invariant -> {
+                    if (Arrays.stream(invariant).allMatch(t -> transitionsFiredInInvariantCicle.get(invariant).get(t) > 0)) {
+                        invariantsTransitionsFiredCount.put(invariant, invariantsTransitionsFiredCount.get(invariant) + 1);
 
-        System.out.print("Current marking: [ ");
-
-        for (int m : petriNet.getCurrentMarking())
-            System.out.print(m + " ");
-
-        System.out.println(" ]");
+                        transitionsFiredInInvariantCicle.get(invariant).keySet()
+                            .forEach(t -> transitionsFiredInInvariantCicle.get(invariant).put(t, transitionsFiredInInvariantCicle.get(invariant).get(t) - 1));
+                    }
+                });
+        } finally {
+            System.out.println("Thread " + Thread.currentThread().getName() + " out UpdateFiredCounts");
+            mutex.unlock();
+        }
     }
 
     /**
      * Sets the interrupted flag to true and signals all the threads in the wait queue.
      */
     private void setInterrupted() {
-        if (mutex.isLocked())
-        {
+        try {
+            mutex.lock();
+
             interrupted = true;
+
             Arrays.stream(waitQueue).forEach(c -> c.signalAll());
+        } finally {
+            mutex.unlock();
         }
-        else
-        {
-            try {
-                mutex.lock();
-                interrupted = true;
-                Arrays.stream(waitQueue).forEach(c -> c.signalAll());
-            } finally {
-                mutex.unlock();
-            }
-        }
-    }
-
-    /**
-     * Sends the thread to the wait queue of the transition.
-     * @param transition Transition to send the thread.
-     */
-    private void sendToWaitQueue(int transition)
-    {
-        try {
-            waitQueue[transition - 1].await();
-        }
-        catch (InterruptedException e) {
-            setInterrupted();
-        }
-    }
-
-    /**
-     * Sends the thread to the wait queue of the transition. Whit a sleep time.
-     * @param transition Transition to send the thread.
-     * @param sleepTime Time to sleep.
-     */
-    private void sendToWaitQueue(int transition, long sleepTime)
-    {
-        try {
-            waitQueue[transition - 1].await(sleepTime, TimeUnit.MILLISECONDS);
-        }
-        catch (InterruptedException e) {
-            setInterrupted();
-        }
-    }
-
-    /**
-     * Checks if the transition is able to fire. If not, sends the thread to the wait queue.
-     * @param transition Transition to check.
-     */
-    private boolean checkStateTransition(int transition) {
-        Transition.TimedState timedState;
-
-        while (!interrupted) {
-            timedState = petriNet.checkTimedStateTransition(transition);
-            
-            if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
-                if (petriNet.isEnabled(transition))
-                    return false;
-
-            if (timedState == Transition.TimedState.BEFORE_WINDOW) {
-                long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
-
-                sendToWaitQueue(transition, sleepTime);
-
-                continue;
-            }
-
-            sendToWaitQueue(transition);
-        }
-
-        return true;
     }
 
     /**
@@ -206,16 +156,12 @@ public class Monitor {
      *         False otherwise.
      */
     public boolean isInterrupted() {
-        if (mutex.isLocked())
+        try {
+            mutex.lock();
+            
             return interrupted;
-        else {
-            try {
-                mutex.lock();
-                
-                return interrupted;
-            } finally {
-                mutex.unlock();
-            }
+        } finally {
+            mutex.unlock();
         }
     }
 
@@ -224,16 +170,12 @@ public class Monitor {
      * @return Transitions fired count map.
      */
     public Map<Integer, Integer> getTransitionsFiredCount() {
-        if (mutex.isLocked())
+        try {
+            mutex.lock();
+            
             return transitionsFiredCount;
-        else {
-            try {
-                mutex.lock();
-                
-                return transitionsFiredCount;
-            } finally {
-                mutex.unlock();
-            }
+        } finally {
+            mutex.unlock();
         }
     }
 
@@ -242,16 +184,12 @@ public class Monitor {
      * @return Invariants transitions fired count map.
      */
     public Map<int[], Integer> getInvariantsTransitionsFiredCount() {
-        if (mutex.isLocked())
+        try {
+            mutex.lock();
+            
             return invariantsTransitionsFiredCount;
-        else {
-            try {
-                mutex.lock();
-                
-                return invariantsTransitionsFiredCount;
-            } finally {
-                mutex.unlock();
-            }
+        } finally {
+            mutex.unlock();
         }
     }
 
@@ -260,16 +198,12 @@ public class Monitor {
      * @param policy Policy for deciding which transition to fire next.
      */
     public void changePolicy(Policy policy) {
-        if (mutex.isLocked())
+        try {
+            mutex.lock(); 
+
             this.policy = policy;
-        else {
-            try {
-                mutex.lock();
-                
-                this.policy = policy;
-            } finally {
-                mutex.unlock();
-            }
+        } finally {
+            mutex.unlock();
         }
     }
 
@@ -280,38 +214,58 @@ public class Monitor {
      */
     public boolean fireTransition(int transition, boolean endTransitions) {
         boolean fired = false;
-        boolean abort = false;
 
         try {
             mutex.lock();
-
-            if(!endTransitions)
-                abort = checkStateTransition(transition);
-
-            if (!abort) {
-                fired = petriNet.fireTransition(transition);
-
-                if (fired)
-                    UpdateFiredCounts(transition);
-
-                if (!endTransitions) {
-                    int[] waitTransitions = getWaitTransitions();
-
-                    int[] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
+            
+            try {
+                while (!isInterrupted()) {               
+                    Transition.TimedState timedState = petriNet.checkTimedStateTransition(transition);
                     
-                    int nextTransition = policy.decide(transitionsAbleToFire, transitionsFiredCount, invariantsTransitionsFiredCount);
+                    if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
+                        if (petriNet.isEnabled(transition))
+                            break;
     
-                    if (nextTransition > 0)
-                        waitQueue[nextTransition - 1].signalAll();
+                    if (timedState == Transition.TimedState.BEFORE_WINDOW) {
+                        long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
+    
+                        waitQueue[transition - 1].await(sleepTime, TimeUnit.MILLISECONDS);
+    
+                        continue;
+                    }
+    
+                    waitQueue[transition - 1].await();
                 }
-            } 
+            } catch (InterruptedException e) {
+                setInterrupted();
+            }
+
+            if (isInterrupted() && !endTransitions)
+                return false;
+
+            fired = petriNet.fireTransition(transition);
+
+            if (fired)
+                UpdateFiredCounts(transition);
+
+            if (!endTransitions) {
+                int[] waitTransitions = getWaitTransitions();
+
+                int[] transitionsAbleToFire = getTransitionsAbleToFire(waitTransitions);
+                
+                int nextTransition = policy.decide(transitionsAbleToFire, transitionsFiredCount, invariantsTransitionsFiredCount);
+
+                if (nextTransition > 0)
+                    waitQueue[nextTransition - 1].signalAll();
+            }
+
+            return fired;
         } catch (IllegalMonitorStateException e) {
             e.printStackTrace();
             System.exit(1);
+            return fired;
         } finally {
             mutex.unlock();
-        }
-
-        return fired;
+        }  
     }
 }
