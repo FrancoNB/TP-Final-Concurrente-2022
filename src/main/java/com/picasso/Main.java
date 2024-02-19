@@ -97,7 +97,7 @@ public class Main {
         Logger.logSystem("* ------------------------------- PICASSO ------------------------------- *\n");
 
         PetriNet petriNet = new PetriNet("PetriNet", Config.INITIAL_MARKING, Config.INCIDENCE_MATRIX, Config.NUMBER_OF_PLACES, Config.NUMBER_OF_TRANSITIONS);
-        Policy policy = new PolicyMinTransitions();
+        Policy policy = new PolicyRandom();
         Monitor monitor = new Monitor(petriNet, policy, Config.INVARIANTS_TRANSITIONS);
         List<Thread> threads = new ArrayList<Thread>();
 
