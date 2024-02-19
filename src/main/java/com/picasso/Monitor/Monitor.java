@@ -23,6 +23,8 @@ public class Monitor {
     private final ReentrantLock mutex;
     // Condition queue for each transition
     private final Condition[] waitQueue;
+    // Condition queue for cool down
+    private final Condition coolDownQueue;
     // Map of fired transitions and their count
     private final Map<Integer, Integer> transitionsFiredCount;
     // Map of invariants and their count
@@ -111,6 +113,8 @@ public class Monitor {
             interrupted = true;
 
             Arrays.stream(waitQueue).forEach(c -> c.signalAll());
+            
+            coolDownQueue.signalAll();  
         } finally {
             mutex.unlock();
         }
@@ -148,6 +152,8 @@ public class Monitor {
         this.waitQueue = IntStream.range(0, petriNet.getNumberOfTransitions())
                                   .mapToObj(i -> mutex.newCondition())
                                   .toArray(Condition[]::new);
+
+        this.coolDownQueue = mutex.newCondition();
     }
 
     /**
@@ -220,21 +226,30 @@ public class Monitor {
             
             try {
                 while (!isInterrupted()) {               
+                    if (!petriNet.isEnabled(transition)) {
+                        waitQueue[transition - 1].await();
+
+                        continue;
+                    }
+
                     Transition.TimedState timedState = petriNet.checkTimedStateTransition(transition);
                     
                     if (timedState == Transition.TimedState.NO_TIMED || timedState == Transition.TimedState.IN_WINDOW)
-                        if (petriNet.isEnabled(transition))
-                            break;
+                        break;
     
                     if (timedState == Transition.TimedState.BEFORE_WINDOW) {
-                        long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
-    
-                        waitQueue[transition - 1].await(sleepTime, TimeUnit.MILLISECONDS);
-    
+                        if(!mutex.hasWaiters(coolDownQueue)) {
+                            long sleepTime = petriNet.getTransition(transition).getTimeStamp() + petriNet.getTransition(transition).getAlfaTime() - System.currentTimeMillis();
+                            
+                            coolDownQueue.await(sleepTime, TimeUnit.MILLISECONDS);
+
+                            continue;
+                        }
+
+                        waitQueue[transition - 1].await();
+
                         continue;
                     }
-    
-                    waitQueue[transition - 1].await();
                 }
             } catch (InterruptedException e) {
                 setInterrupted();
@@ -256,7 +271,7 @@ public class Monitor {
                 int nextTransition = policy.decide(transitionsAbleToFire, transitionsFiredCount, invariantsTransitionsFiredCount);
 
                 if (nextTransition > 0)
-                    waitQueue[nextTransition - 1].signalAll();
+                    waitQueue[nextTransition - 1].signal();
             }
 
             return fired;
